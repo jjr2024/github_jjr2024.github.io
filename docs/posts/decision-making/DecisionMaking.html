@@ -573,7 +573,7 @@ background-size: cover;
 <pre><code>25068803.47746343</code></pre>
 </div>
 </div>
-<p>The below code just runs find_profit on every integer from -100 to 100 in an attempt to find the threshold that gest us the highest profit. We find that a threshold of -1 corresponds to the highest profit value, which is about $25 million.</p>
+<p>The below code runs find_profit on every integer from -100 to 100 to try to find the threshold that gets us the highest profit. We find that a threshold of -1 corresponds to the highest profit value, which is about $25 million. To find this threshold, we use the idxmax() function, which gets us the first occurance of a maximum over an axis. In this case, it helps us find whatever threshold corresponds to the highest profit.</p>
 <div id="cell-23" class="cell" data-execution_count="139">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>iterations <span class="op">=</span> <span class="dv">200</span></span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>predictions <span class="op">=</span> []</span>
@@ -596,7 +596,7 @@ background-size: cover;
 </div>
 </div>
 </div>
-<p>We obtain from our output above the chart of (-1.0, 25755817.698476546) that the profit-maximizing threshold is -1.</p>
+<p>We obtain from our output above the chart (-1.0, 25755817.698476546) that the profit-maximizing threshold is -1.</p>
 </section>
 <section id="part-e-evaluate-your-model-from-the-banks-perspective" class="level2">
 <h2 class="anchored" data-anchor-id="part-e-evaluate-your-model-from-the-banks-perspective">Part E: Evaluate Your Model From the Bank’s Perspective</h2>
