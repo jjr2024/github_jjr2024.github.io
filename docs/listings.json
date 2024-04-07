@@ -2,8 +2,8 @@
   {
     "listing": "/index.html",
     "items": [
-      "/posts/decision-making/DecisionMaking.html",
       "/posts/perceptron-algo/perceptron-algo.html",
+      "/posts/decision-making/DecisionMaking.html",
       "/posts/classifying-penguins/ClassifyingPenguins.html",
       "/posts/new-new-test-post/index.html",
       "/posts/new-test-post/index.html",
