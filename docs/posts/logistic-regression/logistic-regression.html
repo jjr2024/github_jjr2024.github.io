@@ -220,6 +220,7 @@ background-size: cover;
   %reload_ext autoreload</code></pre>
 </div>
 </div>
+<p>Link to logistic.py on GitHub: https://github.com/jjr2024/github_jjr2024.github.io/blob/main/posts/logistic-regression/logistic.py</p>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
 <p>In this blog post, I drop down a level of abstraction from prior work in the class to implement the logistic regression model. I run multiple experiments to confirm the validity of my implementation and to see how the model reacts to changes in hyperparameters (specifically beta and number of features). I find that beta &gt; 0 allows for a faster convergence to a zero or near-zero loss and that when the number of features &gt; number of observations, the model is prone to overfitting.</p>
@@ -227,7 +228,7 @@ background-size: cover;
 <section id="part-a-implement-logistic-regression" class="level2">
 <h2 class="anchored" data-anchor-id="part-a-implement-logistic-regression">Part A: Implement Logistic Regression</h2>
 <p>The below function generates data for a classication problem: n_points controls the number of observations generated. Noise determines the difficulty of the problem. p_dims controls the number of features.</p>
-<div id="cell-6" class="cell" data-execution_count="213">
+<div id="cell-7" class="cell" data-execution_count="213">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> classification_data(n_points <span class="op">=</span> <span class="dv">300</span>, noise <span class="op">=</span> <span class="fl">0.2</span>, p_dims <span class="op">=</span> <span class="dv">2</span>):</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> torch.arange(n_points) <span class="op">&gt;=</span> <span class="bu">int</span>(n_points<span class="op">/</span><span class="dv">2</span>)</span>
@@ -238,7 +239,7 @@ background-size: cover;
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> X, y</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The below defines a function, train(), that trains the logistic regression model on X, y inputs and keeps track of the evolution of the loss over time via the loss_vec. Train() has parameters for the maximum number of update iterations (max_iterations), as well as for the learning rate (a) and the momentum rate (b).</p>
-<div id="cell-8" class="cell" data-execution_count="214">
+<div id="cell-9" class="cell" data-execution_count="214">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -255,7 +256,7 @@ background-size: cover;
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>train(X,y,<span class="dv">1000</span>,<span class="fl">0.1</span>,<span class="fl">0.9</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The below is code defining two functions that assist in visualizing our results. plot_perceptron_data and draw_line visualize our datapoints and our weight vector, respectively.</p>
-<div id="cell-10" class="cell" data-execution_count="215">
+<div id="cell-11" class="cell" data-execution_count="215">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot_perceptron_data(X, y, ax):</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> X.shape[<span class="dv">1</span>] <span class="op">==</span> <span class="dv">3</span>, <span class="st">"This function only works for data created with p_dims == 2"</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    targets <span class="op">=</span> [<span class="dv">0</span>, <span class="dv">1</span>]</span>
@@ -289,7 +290,7 @@ background-size: cover;
 <section id="experiment-1-vanilla-gradient-descent" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-1-vanilla-gradient-descent">Experiment 1: Vanilla Gradient Descent</h3>
 <p>In this first experiment, our data has two features, alpha is small (0.2), and beta = 0. This experiment confirms that our code in Part A is likely correct.</p>
-<div id="cell-13" class="cell" data-execution_count="216">
+<div id="cell-14" class="cell" data-execution_count="216">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -310,7 +311,7 @@ background-size: cover;
 </div>
 </div>
 </div>
-<div id="cell-14" class="cell" data-execution_count="217">
+<div id="cell-15" class="cell" data-execution_count="217">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -327,7 +328,7 @@ background-size: cover;
 <section id="experiment-2-benefits-of-momentum" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-2-benefits-of-momentum">Experiment 2: Benefits of Momentum</h3>
 <p>In this experiment, we set beta = 0.9 to see the benefits of momentum, with which we need fewer iterations to approach a loss of 0.</p>
-<div id="cell-18" class="cell" data-execution_count="218">
+<div id="cell-19" class="cell" data-execution_count="218">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -352,7 +353,7 @@ background-size: cover;
 </div>
 </div>
 </div>
-<div id="cell-19" class="cell" data-execution_count="219">
+<div id="cell-20" class="cell" data-execution_count="219">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -369,7 +370,7 @@ background-size: cover;
 <section id="experiment-3-overfitting" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-3-overfitting">Experiment 3: Overfitting</h3>
 <p>In this experiment, we set the number of observations (15) to be half the number of features (30). We also create two sets of classification data, each with 15 observations, to see how our logistic regression model overfits to the training data and sees a deterioration in accuracy on our test data.</p>
-<div id="cell-23" class="cell" data-execution_count="233">
+<div id="cell-24" class="cell" data-execution_count="233">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>

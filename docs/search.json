@@ -123,7 +123,7 @@
     "href": "posts/logistic-regression/logistic-regression.html",
     "title": "Implementing Logistic Regression",
     "section": "",
-    "text": "%load_ext autoreload\n%autoreload 2\nfrom logistic import LogisticRegression, GradientDescentOptimizer\nimport torch\nfrom matplotlib import pyplot as plt\n\nThe autoreload extension is already loaded. To reload it, use:\n  %reload_ext autoreload"
+    "text": "%load_ext autoreload\n%autoreload 2\nfrom logistic import LogisticRegression, GradientDescentOptimizer\nimport torch\nfrom matplotlib import pyplot as plt\n\nThe autoreload extension is already loaded. To reload it, use:\n  %reload_ext autoreload\nLink to logistic.py on GitHub: https://github.com/jjr2024/github_jjr2024.github.io/blob/main/posts/logistic-regression/logistic.py"
   },
   {
     "objectID": "posts/logistic-regression/logistic-regression.html#introduction",
