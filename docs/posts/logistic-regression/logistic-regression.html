@@ -353,7 +353,8 @@ background-size: cover;
 </div>
 </div>
 </div>
-<div id="cell-20" class="cell" data-execution_count="219">
+<p>The blue line indicates our loss vector when we train our model with b = 0.9. The grey line is the loss vector from Experiment 1. We see early on that momentum can work against us initially, but ultimately does lead to a faster zero or near-zero loss.</p>
+<div id="cell-21" class="cell" data-execution_count="219">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -370,7 +371,7 @@ background-size: cover;
 <section id="experiment-3-overfitting" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-3-overfitting">Experiment 3: Overfitting</h3>
 <p>In this experiment, we set the number of observations (15) to be half the number of features (30). We also create two sets of classification data, each with 15 observations, to see how our logistic regression model overfits to the training data and sees a deterioration in accuracy on our test data.</p>
-<div id="cell-24" class="cell" data-execution_count="233">
+<div id="cell-25" class="cell" data-execution_count="233">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
