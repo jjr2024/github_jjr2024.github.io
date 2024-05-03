@@ -99,6 +99,22 @@ class LogisticRegression(LinearModel):
         #what is effectively an average across all observations
         return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0)
     
+    def hessian(self, X, y):
+        #First we find the diagonal matrix D
+        #Calculated as d_kk(w) = sigmoid(s_k)(1-sigmoid(s_k))
+
+        #Then we apply the equation X^T * D(w) X, where X^T is just the tranpose of X
+
+        pass #TO DO
+
+
+class NewtonOptimizer:
+    def __init__(self, model):
+        self.model = model
+
+    def step(self, X, y, alpha):
+        pass #TO DO
+        
 class GradientDescentOptimizer:
     def __init__(self, model):
         self.model = model
