@@ -70,6 +70,7 @@ class LogisticRegression(LinearModel):
         #Score calculation is where weights matter since score is just X @ w
         sigmoid_score = torch.sigmoid(self.score(X))
         #Calculate loss by effectively taking an average
+        
         return torch.sum(-y*torch.log(sigmoid_score) - (1-y)*torch.log(1 - sigmoid_score)) / X.size()[0]
     
     def grad(self, X, y):
@@ -99,13 +100,44 @@ class LogisticRegression(LinearModel):
         #what is effectively an average across all observations
         return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0)
     
-    def hessian(self, X, y):
-        #First we find the diagonal matrix D
+    def hessian(self, X):
+        """
+        Compute the square matrix of second derivatives of loss function 
+        L. In other words, compute the Hessian matrix H(w) 
+
+        ARGUMENTS: 
+            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s.
+
+        RETURNS: 
+            H(w), torch.Tensor: the Hessian matrix 
+            H(w).size() = (p,p), where p is the number of features
+        """
+        #First we calculate the sigmoid scores
+        sigmoid_score = torch.sigmoid(self.score(X))
+
+        #Then we find the diagonal matrix D
         #Calculated as d_kk(w) = sigmoid(s_k)(1-sigmoid(s_k))
 
-        #Then we apply the equation X^T * D(w) X, where X^T is just the tranpose of X
+        #Initialize the diagonal matrix
+        D_matrix = [[0] * len(sigmoid_score) for _ in range(len(sigmoid_score))]
+        #Fill the diagonal cells
+        for i in range(len(sigmoid_score)):
+            for j in range(len(sigmoid_score)):
+                if i == j:
+                    D_matrix[i][j] = sigmoid_score[i]*(1-sigmoid_score[i])
 
-        pass #TO DO
+        
+        #Convert to tensor
+        D_matrix = torch.tensor(D_matrix)
+        #print("dmatrix: " + str(D_matrix))
+        #Get transpose of X
+        X_transpose = torch.t(X)
+
+        # (p x n) X (n x n) X (n x p) -> (p x p)
+        return X_transpose @ D_matrix @ X 
 
 
 class NewtonOptimizer:
@@ -113,8 +145,31 @@ class NewtonOptimizer:
         self.model = model
 
     def step(self, X, y, alpha):
-        pass #TO DO
+        """
+        Complete one update of weights
+
+        ARGUMENTS: 
+            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s.
+
+            y, torch.Tensor: the target vector. y.size() == (n,),
+            where n is the number of data points.
+
+            alpha, float: a hyperparameter that controls the learning rate,
+            i.e., the size of change each iteration
+
+        RETURNS: 
+            None. Method updates weights but returns nothing
+        """
+
+        hessian = self.model.hessian(X)
+        hessian_inverse = torch.linalg.inv(hessian)
+        grad = self.model.grad(X,y)
         
+        self.model.w = self.model.w - alpha * (hessian_inverse @ grad)
+
 class GradientDescentOptimizer:
     def __init__(self, model):
         self.model = model
