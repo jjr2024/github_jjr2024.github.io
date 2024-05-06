@@ -348,7 +348,7 @@ window.Quarto = {
 </div>
 </div>
 <p>There are two key takeaways for the above graph of the loss vectors.</p>
-<p>First, we see that with alpha = 0.8, we eventually converge to a weight vector that produces a near-zero loss. Second, while the blue line (loss vector with Newton’s Method) and the grey line (loss vector with standard gradient descent) have marked differences in early iterations, they eventually converge to a zero/near-zero loss.</p>
+<p>First, we see that with alpha = 0.9, we eventually converge to a weight vector that produces a near-zero loss. Second, while the blue line (loss vector with Newton’s Method) and the grey line (loss vector with standard gradient descent) have marked differences in early iterations, they eventually converge to a zero/near-zero loss.</p>
 <div id="cell-17" class="cell" data-execution_count="639">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
@@ -367,7 +367,7 @@ window.Quarto = {
 </section>
 <section id="experiment-2-faster-convergence" class="level3">
 <h3 class="anchored" data-anchor-id="experiment-2-faster-convergence">Experiment 2: Faster Convergence</h3>
-<p>Below, we run an experiment comparing standard gradient descent to the Newton’s method in a context in which the latter has far faster convergence than the former.</p>
+<p>Below, we run an experiment comparing standard gradient descent to the Newton’s method in a context in which the latter has far faster convergence than the former. We set the number of observations to be very low (6) and the noise to be high (1).</p>
 <div id="cell-21" class="cell" data-execution_count="643">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">6</span>, noise <span class="op">=</span> <span class="dv">1</span>, p_dims <span class="op">=</span> <span class="dv">2</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
