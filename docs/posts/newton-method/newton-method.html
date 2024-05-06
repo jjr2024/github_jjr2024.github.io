@@ -7,10 +7,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="James Ohr">
-<meta name="dcterms.date" content="2024-05-02">
-<meta name="description" content="A blog post about implementing and testing the logistic regression algorithm.">
+<meta name="dcterms.date" content="2024-05-05">
+<meta name="description" content="A blog post about implementing and testing Newton’s method for logistic regression.">
 
-<title>My Awesome CSCI 0451 Blog - Implementing Logistic Regression</title>
+<title>My Awesome CSCI 0451 Blog - Newton’s Method for Logistic Regression</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -122,6 +122,35 @@ background-size: cover;
       }
 </style>
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../../styles.css">
 </head>
@@ -168,10 +197,10 @@ background-size: cover;
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Implementing Logistic Regression</h1>
+      <h1 class="title">Newton’s Method for Logistic Regression</h1>
                   <div>
         <div class="description">
-          A blog post about implementing and testing the logistic regression algorithm.
+          A blog post about implementing and testing Newton’s method for logistic regression.
         </div>
       </div>
                 </div>
@@ -190,7 +219,7 @@ background-size: cover;
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">May 2, 2024</p>
+        <p class="date">May 5, 2024</p>
       </div>
     </div>
     
@@ -209,10 +238,10 @@ background-size: cover;
 
 
 
-<div id="cell-1" class="cell" data-execution_count="23">
+<div id="cell-1" class="cell" data-execution_count="633">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext autoreload</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>autoreload <span class="dv">2</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> logistic <span class="im">import</span> LogisticRegression, GradientDescentOptimizer</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> newton <span class="im">import</span> LogisticRegression, GradientDescentOptimizer, NewtonOptimizer</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> pyplot <span class="im">as</span> plt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -220,15 +249,17 @@ background-size: cover;
   %reload_ext autoreload</code></pre>
 </div>
 </div>
-<p>Link to logistic.py on GitHub: https://github.com/jjr2024/github_jjr2024.github.io/blob/main/posts/logistic-regression/logistic.py</p>
+<p>Link to newton.py in Github: https://github.com/jjr2024/github_jjr2024.github.io/blob/main/posts/newton-method/newton.py</p>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p>In this blog post, I drop down a level of abstraction from prior work in the class to implement the logistic regression model. I run multiple experiments to confirm the validity of my implementation and to see how the model reacts to changes in hyperparameters (specifically beta and number of features). I find that beta &gt; 0 allows for a faster convergence to a zero or near-zero loss and that when the number of features &gt; number of observations, the model is prone to overfitting.</p>
+<p>In this blog post, I implement Newton’s method, an optimizer technique that’s an alternative to standard gradient descent. I run three experiments and find that Newton’s method works best with low numbers of observations, high noise, and relatively low alphas (learning rates). Then I consider the computational cost of Newton’s method vs.&nbsp;gradient descent and consider the impact of <span class="math inline">\(p\)</span>, the number of features, on the comparison between the two methods.</p>
 </section>
-<section id="part-a-implement-logistic-regression" class="level2">
-<h2 class="anchored" data-anchor-id="part-a-implement-logistic-regression">Part A: Implement Logistic Regression</h2>
-<p>The below function generates data for a classication problem: n_points controls the number of observations generated. Noise determines the difficulty of the problem. p_dims controls the number of features.</p>
-<div id="cell-7" class="cell" data-execution_count="24">
+<section id="part-a-implement-newtonoptimizer" class="level2">
+<h2 class="anchored" data-anchor-id="part-a-implement-newtonoptimizer">Part A: Implement NewtonOptimizer</h2>
+<p>In this section, we define functions that we will use in our experiments. classification_data generates data for a classication problem: n_points controls the number of observations generated. Noise determines the difficulty of the problem. p_dims controls the number of features.</p>
+<p>Train() is a function to train our LR model. We can control the maximum number of iterations (max_iterations) and the learning rate (a).</p>
+<p>plot_perceptron_data and draw_line allow us to plot our data and our weight vector respectively to visualize our results.</p>
+<div id="cell-7" class="cell" data-execution_count="634">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> classification_data(n_points <span class="op">=</span> <span class="dv">300</span>, noise <span class="op">=</span> <span class="fl">0.2</span>, p_dims <span class="op">=</span> <span class="dv">2</span>):</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> torch.arange(n_points) <span class="op">&gt;=</span> <span class="bu">int</span>(n_points<span class="op">/</span><span class="dv">2</span>)</span>
@@ -238,25 +269,19 @@ background-size: cover;
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    </span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> X, y</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The below defines a function, train(), that trains the logistic regression model on X, y inputs and keeps track of the evolution of the loss over time via the loss_vec. Train() has parameters for the maximum number of update iterations (max_iterations), as well as for the learning rate (a) and the momentum rate (b).</p>
-<div id="cell-9" class="cell" data-execution_count="25">
+<div id="cell-8" class="cell" data-execution_count="635">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> NewtonOptimizer(LR)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">100</span>, noise <span class="op">=</span> <span class="fl">0.1</span>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train(X, y, max_iterations <span class="op">=</span> <span class="dv">1000</span>, a <span class="op">=</span> <span class="fl">0.1</span>, b <span class="op">=</span> <span class="fl">0.9</span>):</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(max_iterations):</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        loss <span class="op">=</span> LR.loss(X, y) </span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>        loss_vec.append(loss)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        opt.step(X, y, a, b)</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>train(X,y,<span class="dv">1000</span>,<span class="fl">0.1</span>,<span class="fl">0.9</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train(X, y, max_iterations <span class="op">=</span> <span class="dv">1000</span>, a <span class="op">=</span> <span class="fl">0.1</span>):</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(max_iterations):</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>        loss <span class="op">=</span> LR.loss(X, y) </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>        loss_vec.append(loss)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>        opt.step(X, y, a)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The below is code defining two functions that assist in visualizing our results. plot_perceptron_data and draw_line visualize our datapoints and our weight vector, respectively.</p>
-<div id="cell-11" class="cell" data-execution_count="26">
+<div id="cell-9" class="cell" data-execution_count="636">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> plot_perceptron_data(X, y, ax):</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> X.shape[<span class="dv">1</span>] <span class="op">==</span> <span class="dv">3</span>, <span class="st">"This function only works for data created with p_dims == 2"</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    targets <span class="op">=</span> [<span class="dv">0</span>, <span class="dv">1</span>]</span>
@@ -266,136 +291,215 @@ background-size: cover;
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        ax.scatter(X[ix,<span class="dv">0</span>], X[ix,<span class="dv">1</span>], s <span class="op">=</span> <span class="dv">20</span>,  c <span class="op">=</span> y[ix], facecolors <span class="op">=</span> <span class="st">"none"</span>, edgecolors <span class="op">=</span> <span class="st">"darkgrey"</span>, cmap <span class="op">=</span> <span class="st">"BrBG"</span>, vmin <span class="op">=</span> <span class="op">-</span><span class="dv">2</span>, vmax <span class="op">=</span> <span class="dv">2</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, marker <span class="op">=</span> markers[i])</span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    ax.<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="vs">r"$x_1$"</span>, ylabel <span class="op">=</span> <span class="vs">r"$x_2$"</span>)</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> draw_line(w, x_min, x_max, ax, <span class="op">**</span>kwargs):</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    w_ <span class="op">=</span> w.flatten()</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> torch.linspace(x_min, x_max, <span class="dv">101</span>)</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> <span class="op">-</span>(w_[<span class="dv">0</span>]<span class="op">*</span>x <span class="op">+</span> w_[<span class="dv">2</span>])<span class="op">/</span>w_[<span class="dv">1</span>]</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    l <span class="op">=</span> ax.plot(x, y, <span class="op">**</span>kwargs)</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="logistic-regression_files/figure-html/cell-5-output-1.png" class="img-fluid figure-img"></p>
-</figure>
-</div>
-</div>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> draw_line(w, x_min, x_max, ax, <span class="op">**</span>kwargs):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    w_ <span class="op">=</span> w.flatten()</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> torch.linspace(x_min, x_max, <span class="dv">101</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    y <span class="op">=</span> <span class="op">-</span>(w_[<span class="dv">0</span>]<span class="op">*</span>x <span class="op">+</span> w_[<span class="dv">2</span>])<span class="op">/</span>w_[<span class="dv">1</span>]</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    l <span class="op">=</span> ax.plot(x, y, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="part-b-experiments" class="level2">
-<h2 class="anchored" data-anchor-id="part-b-experiments">Part B: Experiments</h2>
-<section id="experiment-1-vanilla-gradient-descent" class="level3">
-<h3 class="anchored" data-anchor-id="experiment-1-vanilla-gradient-descent">Experiment 1: Vanilla Gradient Descent</h3>
-<p>In this first experiment, our data has two features, alpha is small (0.2), and beta = 0. This experiment confirms that our code in Part A is likely correct.</p>
-<div id="cell-14" class="cell" data-execution_count="27">
+<section id="part-b-perform-experiments" class="level2">
+<h2 class="anchored" data-anchor-id="part-b-perform-experiments">Part B: Perform Experiments</h2>
+<section id="experiment-1-appropriate-alpha---converge-to-correct-weight-vector" class="level3">
+<h3 class="anchored" data-anchor-id="experiment-1-appropriate-alpha---converge-to-correct-weight-vector">Experiment 1: Appropriate Alpha -&gt; Converge to Correct Weight Vector</h3>
+<p>In the below code, we generate our classification data and calculate the loss vector when we use our Newton optimizer. The last item in the loss vector is near-zero.</p>
+<div id="cell-13" class="cell" data-execution_count="637">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> NewtonOptimizer(LR)</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
 <span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">100</span>, noise <span class="op">=</span> <span class="fl">0.1</span>, p_dims <span class="op">=</span> <span class="dv">2</span>)</span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>train(X,y,<span class="dv">1000</span>,a<span class="op">=</span><span class="fl">0.2</span>,b<span class="op">=</span><span class="fl">0.0</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>train(X,y,<span class="dv">1000</span>,a<span class="op">=</span><span class="fl">0.9</span>)</span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec)), loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>labs <span class="op">=</span> plt.gca().<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="st">"Perceptron Iteration (Updates Only)"</span>, ylabel <span class="op">=</span> <span class="st">"Loss"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="logistic-regression_files/figure-html/cell-6-output-1.png" class="img-fluid figure-img"></p>
-</figure>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Last Loss: "</span> <span class="op">+</span> <span class="bu">str</span>(loss_vec[<span class="bu">len</span>(loss_vec)<span class="op">-</span><span class="dv">1</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Last Loss: tensor(5.4466e-05)</code></pre>
 </div>
 </div>
-</div>
-<div id="cell-15" class="cell" data-execution_count="28">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="logistic-regression_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>The above visualization shows that our data is linearly separable and that our weight vector correctly classifies the data with 100% accuracy.</p>
-</section>
-<section id="experiment-2-benefits-of-momentum" class="level3">
-<h3 class="anchored" data-anchor-id="experiment-2-benefits-of-momentum">Experiment 2: Benefits of Momentum</h3>
-<p>In this experiment, we set beta = 0.9 to see the benefits of momentum, with which we need fewer iterations to approach a loss of 0.</p>
-<div id="cell-19" class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>loss_vec2 <span class="op">=</span> loss_vec</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
+<p>In the below code, we save the loss vector we just computed into loss_vec2 and then compute, on the same classification data, the loss vector when we use standard gradient descent. Then we visualize both loss vectors.</p>
+<div id="cell-15" class="cell" data-execution_count="638">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>LR2 <span class="op">=</span> LR</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>loss_vec2 <span class="op">=</span> loss_vec</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co">#No classification_data call so that we use same dataset</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>train(X,y,<span class="dv">1000</span>,a<span class="op">=</span><span class="fl">0.2</span>,b<span class="op">=</span><span class="fl">0.9</span>)</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec2, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec)), loss_vec, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec2)), loss_vec2, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>labs <span class="op">=</span> plt.gca().<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="st">"Perceptron Iteration (Updates Only)"</span>, ylabel <span class="op">=</span> <span class="st">"Loss"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="co">#Standard gradient descent</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1000</span>):</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> LR.loss(X, y) </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    loss_vec.append(loss)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    opt.step(X, y, <span class="fl">0.9</span>, <span class="fl">0.0</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec2, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec)), loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec2)), loss_vec2, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>labs <span class="op">=</span> plt.gca().<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="st">"Perceptron Iteration (Updates Only)"</span>, ylabel <span class="op">=</span> <span class="st">"Loss"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="logistic-regression_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="newton-method_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>The blue line indicates our loss vector when we train our model with b = 0.9. The grey line is the loss vector from Experiment 1. We see early on that momentum can work against us initially, but ultimately does lead to a faster zero or near-zero loss.</p>
-<div id="cell-21" class="cell" data-execution_count="30">
+<p>There are two key takeaways for the above graph of the loss vectors.</p>
+<p>First, we see that with alpha = 0.8, we eventually converge to a weight vector that produces a near-zero loss. Second, while the blue line (loss vector with Newton’s Method) and the grey line (loss vector with standard gradient descent) have marked differences in early iterations, they eventually converge to a zero/near-zero loss.</p>
+<div id="cell-17" class="cell" data-execution_count="639">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">1</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>plot_perceptron_data(X, y, ax)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>draw_line(LR.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"black"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>draw_line(LR2.w, <span class="dv">0</span>, <span class="dv">1</span>, ax, color <span class="op">=</span> <span class="st">"blue"</span>, linestyle <span class="op">=</span> <span class="st">"dashed"</span>, label <span class="op">=</span> <span class="st">"weight vector w"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="logistic-regression_files/figure-html/cell-9-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="newton-method_files/figure-html/cell-8-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>Again we achieve 100% accuracy in classification, as shown by our weight vector accurately separating the two groups of data.</p>
+<p>We see above that standard gradient descent (black line) and Newton’s method (blue line) have converged to very similar weight vectors. Both successfully separate our data into two categories.</p>
 </section>
-<section id="experiment-3-overfitting" class="level3">
-<h3 class="anchored" data-anchor-id="experiment-3-overfitting">Experiment 3: Overfitting</h3>
-<p>In this experiment, we set the number of observations (15) to be half the number of features (30). We also create two sets of classification data, each with 15 observations, to see how our logistic regression model overfits to the training data and sees a deterioration in accuracy on our test data.</p>
-<div id="cell-25" class="cell" data-execution_count="31">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
+<section id="experiment-2-faster-convergence" class="level3">
+<h3 class="anchored" data-anchor-id="experiment-2-faster-convergence">Experiment 2: Faster Convergence</h3>
+<p>Below, we run an experiment comparing standard gradient descent to the Newton’s method in a context in which the latter has far faster convergence than the former.</p>
+<div id="cell-21" class="cell" data-execution_count="643">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">6</span>, noise <span class="op">=</span> <span class="dv">1</span>, p_dims <span class="op">=</span> <span class="dv">2</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> NewtonOptimizer(LR)</span>
 <span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>X_train, y_train <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">15</span>, noise <span class="op">=</span> <span class="fl">0.5</span>, p_dims <span class="op">=</span> <span class="dv">30</span>)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>X_test, y_test <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">15</span>, noise <span class="op">=</span> <span class="fl">0.5</span>, p_dims <span class="op">=</span> <span class="dv">30</span>)</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>train(X_train,y_train,<span class="dv">100</span>,a<span class="op">=</span><span class="fl">0.1</span>,b<span class="op">=</span><span class="fl">0.0</span>)</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>(LR.predict(X_train) <span class="op">==</span> y_train).<span class="bu">float</span>().mean(), (LR.predict(X_test) <span class="op">==</span> y_test).<span class="bu">float</span>().mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="31">
-<pre><code>(tensor(1.), tensor(1.))</code></pre>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>max_iterations <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>train(X,y,max_iterations,a<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>loss_vec2 <span class="op">=</span> loss_vec</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>LR2 <span class="op">=</span> LR</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Last Loss: "</span> <span class="op">+</span> <span class="bu">str</span>(loss_vec[<span class="bu">len</span>(loss_vec)<span class="op">-</span><span class="dv">1</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Last Loss: tensor(0.5748)</code></pre>
 </div>
 </div>
-<p>Above, the first tensor, 1., reflects our 100% accuracy on our training. The second tensor reflects 93.33% accuracy in our testing data set.</p>
-<p>The difference in accuracy rates reflects our model’s overfitting on the training set.</p>
+<div id="cell-22" class="cell" data-execution_count="644">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> GradientDescentOptimizer(LR)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Standard gradient descent</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(max_iterations):</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> LR.loss(X, y) </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    loss_vec.append(loss)</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    opt.step(X, y, <span class="fl">0.5</span>, <span class="fl">0.0</span>)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec2, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec)), loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec2)), loss_vec2, color <span class="op">=</span> <span class="st">"blue"</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>labs <span class="op">=</span> plt.gca().<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="st">"Perceptron Iteration (Updates Only)"</span>, ylabel <span class="op">=</span> <span class="st">"Loss"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="newton-method_files/figure-html/cell-10-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Newton’s method (blue line) converges far faster than standard gradient descent (grey line) when we have a very small number of data points and very high noise.</p>
+</section>
+<section id="experiment-3-failure-to-converge" class="level3">
+<h3 class="anchored" data-anchor-id="experiment-3-failure-to-converge">Experiment 3: Failure to Converge</h3>
+<p>When alpha is too high, Newton’s method fails to converge. In the below experiment, we create classification data with just 6 observations and set alpha = 15.</p>
+<div id="cell-26" class="cell" data-execution_count="1014">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>X, y <span class="op">=</span> classification_data(n_points <span class="op">=</span> <span class="dv">6</span>, noise <span class="op">=</span> <span class="fl">0.3</span>, p_dims <span class="op">=</span> <span class="dv">2</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>LR <span class="op">=</span> LogisticRegression() </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>opt <span class="op">=</span> NewtonOptimizer(LR)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>loss_vec <span class="op">=</span> []</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> <span class="dv">15</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>max_iterations <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(max_iterations):</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> LR.loss(X, y) </span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    loss_vec.append(loss)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    opt.step(X, y, alpha)</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Matrix Inverse of Hessian: "</span> <span class="op">+</span> <span class="bu">str</span>(torch.linalg.inv(LR.hessian(X))))</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Final Weights: "</span> <span class="op">+</span> <span class="bu">str</span>(LR.w))</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Sigmoid(Scores): "</span> <span class="op">+</span> <span class="bu">str</span>(torch.sigmoid(LR.score(X))))</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Log of One Less Sigmoid(Scores): "</span> <span class="op">+</span> <span class="bu">str</span>(torch.log(<span class="dv">1</span> <span class="op">-</span> torch.sigmoid(LR.score(X)))))</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Last Loss: "</span> <span class="op">+</span> <span class="bu">str</span>(loss_vec[<span class="bu">len</span>(loss_vec)<span class="op">-</span><span class="dv">1</span>]))</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>plt.plot(loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>plt.scatter(torch.arange(<span class="bu">len</span>(loss_vec)), loss_vec, color <span class="op">=</span> <span class="st">"slategrey"</span>)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>labs <span class="op">=</span> plt.gca().<span class="bu">set</span>(xlabel <span class="op">=</span> <span class="st">"Perceptron Iteration (Updates Only)"</span>, ylabel <span class="op">=</span> <span class="st">"Loss"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Matrix Inverse of Hessian: tensor([[ 1.5264e+08, -1.2952e+10, -4.2737e+08],
+        [-5.0249e+09, -2.0723e+11, -4.6904e+09],
+        [-1.9267e+08, -2.4107e+09, -1.5962e+07]])
+Final Weights: tensor([-7.5370e+17,  1.6740e+19,  7.1238e+17])
+Sigmoid(Scores): tensor([0.5000, 0.0000, 1.0000, 1.0000, 1.0000, 1.0000])
+Log of One Less Sigmoid(Scores): tensor([-0.6931,  0.0000,    -inf,    -inf,    -inf,    -inf])
+Last Loss: tensor(nan)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="newton-method_files/figure-html/cell-11-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>With a high alpha relative to the number of datapoints, we get a strange loss vector and fail to converge. Above the chart is a series of print statements illustrating the problem. Our matrix inverse of the hessian ends up with values with extremely high absolute values because, multiplied by a high alpha, these values are embedded into the weights, which become increasingly large with each iteration.</p>
+<p>The weights are enormous, leading to extremely high scores, which translate into extremely negative values when we calculate the log of (1 - sigmoid(scores)). Those extremely negative values are treated by Python as negative infinity. By attempting to run calculations with these -inf values, we end up with NaNs.</p>
 </section>
 </section>
-<section id="part-c-writing-conclusion" class="level2">
-<h2 class="anchored" data-anchor-id="part-c-writing-conclusion">Part C: Writing / Conclusion</h2>
-<p>In this blog post, I run experiments to confirm the validity of my implementation and to see how the model reacts to changes in hyperparameters (specifically beta and number of features). I find that beta &gt; 0 allows for a faster convergence to a zero or near-zero loss and that when the number of features &gt; number of observations, the model is prone to overfitting.</p>
-<p>In writing this blog post, I learned about why momentum is useful for gradient descent and why in practice beta = 0.9 is common. I gained more familiarity turning mathematical equations into code. I had a more efficient process than previous posts because of more effective debugging, especially by knowing what to look for (the shape() function to different tensors was extremely useful to know when I did something wrong).</p>
+<section id="part-c-operation-counting" class="level2">
+<h2 class="anchored" data-anchor-id="part-c-operation-counting">Part C: Operation Counting</h2>
+<section id="problem" class="level3">
+<h3 class="anchored" data-anchor-id="problem">Problem</h3>
+<p>We are given the following:</p>
+<ul>
+<li>Computational units for each calculation
+<ul>
+<li><span class="math inline">\(L = c\)</span></li>
+<li><span class="math inline">\(\nabla L = 2c\)</span></li>
+<li><span class="math inline">\(Hessian = pc\)</span></li>
+<li>Invert a <span class="math inline">\(p \times p\)</span> matrix <span class="math inline">\(= k_1p^\gamma\)</span></li>
+<li>Newton’s method matrix-vector multiplication <span class="math inline">\(= k_2p^2\)</span></li>
+</ul></li>
+<li>Newton’s method converges in <span class="math inline">\(t_{nm}\)</span> steps</li>
+<li>Gradient descent converges in <span class="math inline">\(t_{gd}\)</span> steps</li>
+</ul>
+<p>We want to know how much smaller <span class="math inline">\(t_{nm}\)</span> needs to be than <span class="math inline">\(t_{gd}\)</span> for Newton’s method to require fewer computational units to complete. We also want to know if using Newton’s method ever pays off if <span class="math inline">\(p\)</span> is very large.</p>
+</section>
+<section id="solution" class="level3">
+<h3 class="anchored" data-anchor-id="solution">Solution</h3>
+<p>First we set up a very abstract equation. Then we unravel the abstracted components of the inequality.</p>
+<ol type="1">
+<li>Total computational cost of Newton’s Method <span class="math inline">\(=\)</span> Total computational cost of gradient descent</li>
+</ol>
+<p>For both sides of the equation, total computational cost = number of iterations (i.e., steps) times cost per iteration.</p>
+<ol start="2" type="1">
+<li><p><span class="math inline">\(t_{nm} (c + 2c + pc + k_1p^\gamma + k_2p^2) = t_{gd} (c + 2c)\)</span></p></li>
+<li><p><span class="math inline">\(t_{nm} (3c + pc + k_1p^\gamma + k_2p^2) = t_{gd} (3c)\)</span></p></li>
+<li><p><span class="math inline">\(t_{nm} = t_{gd}*\frac{3c}{3c + pc + k_1p^\gamma + k_2p^2}\)</span></p></li>
+</ol>
+<p>With this equation, we know <span class="math inline">\(t_{nm}\)</span> must be <span class="math inline">\(\frac{3c}{3c + pc + k_1p^\gamma + k_2p^2}\)</span> of <span class="math inline">\(t_{gd}\)</span> for the computational costs to be <em>equal</em>. So <span class="math inline">\(t_{nm}\)</span> needs to be less than <span class="math inline">\(\frac{3c}{3c + pc + k_1p^\gamma + k_2p^2}\)</span> of <span class="math inline">\(t_{gd}\)</span> for Newton’s method to be computationally cheaper than gradient descent.</p>
+<p>The fraction shows that as p increases in size, the denominator of the right-hand-side fraction in step 4 increases. So the entire fraction shrinks in value. In other words, <span class="math inline">\(t_{nm}\)</span> must become an even smaller percentage of <span class="math inline">\(t_{gd}\)</span>. Therefore, when <span class="math inline">\(p\)</span> becomes very large, it seems unlikely that using Newton’s method will pay off.</p>
+</section>
+</section>
+<section id="part-d-writing" class="level2">
+<h2 class="anchored" data-anchor-id="part-d-writing">Part D: Writing</h2>
+<p>In this post, I found Newton’s method was a computationally expensive but faster (in some cases) alternative to gradient descent. The number of observations, the difficulty of the classification problem (noise), and the learning rate all impacted the relative performance of Newton’s method vs.&nbsp;gradient descent.</p>
+<p>I continued to grapple with linear algebra and programming implementations of it in this post. Implementing Newton’s method wasn’t painless, but it went about as smoothly as implementing logistic regression. The similarity of this post with perceptron and logistic regression implementation helped significantly in making that happen. I gained more familiarity with analyzing the components of my model via the analysis in experiment 3. It helped significantly with my understanding of this model to break down, step-by-step, why the loss became NaN.</p>
 
 
 </section>
