@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.550">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Andre Xiao, James Ohr, Donovan Wood">
+<meta name="dcterms.date" content="2024-04-22">
+<meta name="description" content="Final Project for CS451">
+
+<title>My Awesome CSCI 0451 Blog - Quantitative Trading Model Using LSTM</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>
+
+      .quarto-title-block .quarto-title-banner h1,
+      .quarto-title-block .quarto-title-banner h2,
+      .quarto-title-block .quarto-title-banner h3,
+      .quarto-title-block .quarto-title-banner h4,
+      .quarto-title-block .quarto-title-banner h5,
+      .quarto-title-block .quarto-title-banner h6
+      {
+        color: white;
+      }
+
+      .quarto-title-block .quarto-title-banner {
+        color: white;
+background-image: url(../../img/landscape.png);
+background-size: cover;
+      }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed fullcontent">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">My Awesome CSCI 0451 Blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://twitter.com"> <i class="bi bi-twitter" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+          <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Quantitative Trading Model Using LSTM</h1>
+                  <div>
+        <div class="description">
+          Final Project for CS451
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Andre Xiao, James Ohr, Donovan Wood </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">April 22, 2024</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<section id="quantitative-trading-model-using-lstm" class="level1">
+<h1>Quantitative Trading Model Using LSTM</h1>
+<section id="donovan-wood-james-ohr-andre-xiao" class="level4">
+<h4 class="anchored" data-anchor-id="donovan-wood-james-ohr-andre-xiao">Donovan Wood, James Ohr, Andre Xiao</h4>
+</section>
+<section id="abstract" class="level2">
+<h2 class="anchored" data-anchor-id="abstract">Abstract</h2>
+<p>We applied machine learning methods to predict daily stock price movements in a basket of 10 US-listed energy companies. We found the most success using an LSTM model, achieving an accuracy of up to 61% on one stock (PSX). In line with prior literature, we compared our results to a benchmark established by a last value machine, which simply predicts the next day’s price to be the current day’s actual price. We tested our model on two different sets of observations, first on a year’s worth of historical data (historical test) and then on one week of recent trading data (live test). Comparing our LSTM results to our benchmark, we find mixed results. We achieve, on average, 53.57% accuracy vs.&nbsp;our benchmark’s 53.08% accuracy on the historical test. For the ten companies in our analysis, our model has superior for accuracy for 6 companies, has equal accuracy for 1 company, and has worse accuracy for 3 companies compared to our last value benchmark. This superior accuracy leads to higher simulated portfolio returns using our model compared to our benchmarks. Our live test accuracy of 49.99% was worse but still beat our benchmark’s accuracy of 48.33%.</p>
+</section>
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>In this blog post, we train machine learning models on historical stock market data to predict future stock price movements. This is a highly popular problem to address because of the potential for significant monetary gain. This is an important problem societally because stock markets are mechanisms of price discovery: they answer the question “What is a company worth?” Finding the right answer to that question allows society to correctly allocate more or less capital (money) to that company. On an individual level, this is an important problem to us as the authors because it’s the problem for all quant trading: making a profitable model.</p>
+<p>An enormous body of literature within and without computer science exists for stock market prediction. Among the papers most relevant to our work are <span class="citation" data-cites="gunduzEfficientPrediction2021">Gunduz (<a href="#ref-gunduzEfficientPrediction2021" role="doc-biblioref">2021</a>)</span>, <span class="citation" data-cites="bhandariLSTM2022">Bhandari et al. (<a href="#ref-bhandariLSTM2022" role="doc-biblioref">2022</a>)</span>, and <span class="citation" data-cites="zhangPrediction2022">Zhang (<a href="#ref-zhangPrediction2022" role="doc-biblioref">2022</a>)</span>.</p>
+<p><span class="citation" data-cites="gunduzEfficientPrediction2021">Gunduz (<a href="#ref-gunduzEfficientPrediction2021" role="doc-biblioref">2021</a>)</span> applies LSTM and ensemble learning (Light-GBM) models to predict the hourly directions of eight banking stocks in Borsa Istanbul. He achieved up to maximum success rate of 0.685 using individual features of bank stocks and LSTM.</p>
+<p><span class="citation" data-cites="bhandariLSTM2022">Bhandari et al. (<a href="#ref-bhandariLSTM2022" role="doc-biblioref">2022</a>)</span> apply single-layer and multi-layer LSTM models to the problem of predicting the S&amp;P 500, the index of the largest 500 publicly traded companies in America. Their single-layer LTSM model with 150 neurons is their best performing specification. Their set of predicted values have an average correlation coefficient of 0.9976 with actual S&amp;P index values.</p>
+<p><span class="citation" data-cites="zhangPrediction2022">Zhang (<a href="#ref-zhangPrediction2022" role="doc-biblioref">2022</a>)</span> finds the LSTM network model does not perform better than other models when applied to a short forecasting horizon (1 to 10 days). Zhang’s “other models” are linear regression, eXtreme gradient boosting (XGBoost), last value, and moving average.</p>
+<p>We take some of the “best practices” we observe in the above papers, specifically benchmarking with last value and using MSE and R to assess our results. Unlike the mentioned papers, we will be focusing on single stocks and attempting to build a model that outperforms the last value benchmark.</p>
+</section>
+<section id="values" class="level2">
+<h2 class="anchored" data-anchor-id="values">Values</h2>
+<p>The potential users are anyone interested in making profitable trades in the stock market. They are the individuals most likely to directly benefit from our work. Nonusers who could be affected by our work are those engaged in the stock market. The obvious affected nonusers are those on the opposite side of each trade as a user. In every trade, there’s a buyer and a seller, so in every trade, there’s a winner and a loser. These opposing nonusers are the individuals who are most likely to be harmed by the success of our program.</p>
+<p>Ultimately, the point of the back and forth of markets is price discovery: to help society find the right prices of different companies. This leads to another nonuser effect: with better price discovery and more efficient markets, companies will raise money at prices that are closer to some “true” value, which is loosely defined as a value that best reflects the fundamental valuation of the company. Our model does not attempt to predict a true fundamental value for a company, but by making accurate predictions for the next day’s price, it should accelerate the market’s convergence to an appropriate value.</p>
+<p>A useful financial trading model should lead to a net societal benefit because better financial markets mean more or less money going to companies and therefore projects, leading to something closer to an “optimal” allocation of money in society.</p>
+<p>We are personally motivated to work on this project because of personal interest, professional relevance, and the difficulty of the problem. All three of us personally invest in the stock market. Two of us (Donovan &amp; James) are double majors in economics and have had experience working in the financial services industry. Andre is interested in pursuing a master’s in financial engineering after Middlebury. The problem itself is also inherently challenging: financial markets are constantly adapting and changing, making the findings of previous literature increasingly likely over time to be less applicable to today’s markets. This forces us to adopt new techniques. # Materials and Methods</p>
+</section>
+<section id="our-data" class="level2">
+<h2 class="anchored" data-anchor-id="our-data">Our Data</h2>
+<p>Our data was sourced from Yahoo Finance. We used the <code>yfinance</code> library to download historical stock price data for our 10 different stocks. We chose to focus on US-based oil companies. These companies are Exxon Mobil (XOM), Chevron (CVX), ConocoPhillips (COP), Enterprise Products Partners (EPD), Pioneer Natural Resources (PXD), EOG Resources (EOG), Duke Energy (DUK), Marathon Petroleum (MPC), Schlumberger (SLB), and Phillips 66 (PSX). We downloaded the data from May 6th, 2014 to May 6th, 2024.</p>
+<p>Within the <code>yfinance</code> dataset we were given the following columns: <code>Open</code>, <code>High</code>, <code>Low</code>, <code>Close</code>, <code>Adj Close</code>, <code>Volume</code>.</p>
+<p><code>Open</code> is the opening price of the stock for the day. <code>High</code> is the highest price of the stock for the day. <code>Low</code> is the lowest price of the stock for the day. <code>Close</code> is the closing price of the stock for the day. <code>Adj Close</code> is the adjusted closing price of the stock for the day. <code>Volume</code> is the number of shares traded for the day.</p>
+<p>We used the <code>Close</code> column as our target variable for our model. We also created the following features: <code>SMA_20</code>, <code>SMA_50</code>, <code>Std_Dev</code>, <code>Z_Score</code>, <code>RSI</code>, <code>TTM_P/E</code> which will be discussed below. Here’s a look at what the raw data looks like:</p>
+<div id="cell-3" class="cell" data-execution_count="63">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> yfinance <span class="im">as</span> yf</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>xom <span class="op">=</span> yf.Ticker(<span class="st">'XOM'</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> xom.history(start<span class="op">=</span><span class="st">'2014-05-06'</span>, end<span class="op">=</span><span class="st">'2024-05-07'</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>data.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="63">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Close</th>
+<th data-quarto-table-cell-role="th">Volume</th>
+<th data-quarto-table-cell-role="th">Dividends</th>
+<th data-quarto-table-cell-role="th">Stock Splits</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">Date</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2014-05-06 00:00:00-04:00</td>
+<td>66.050586</td>
+<td>66.501227</td>
+<td>65.928274</td>
+<td>66.095650</td>
+<td>9669800</td>
+<td>0.00</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2014-05-07 00:00:00-04:00</td>
+<td>66.385376</td>
+<td>66.597816</td>
+<td>66.172931</td>
+<td>66.378937</td>
+<td>11007400</td>
+<td>0.00</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2014-05-08 00:00:00-04:00</td>
+<td>66.366038</td>
+<td>66.494794</td>
+<td>65.773772</td>
+<td>65.870338</td>
+<td>8922500</td>
+<td>0.00</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2014-05-09 00:00:00-04:00</td>
+<td>65.922184</td>
+<td>66.226810</td>
+<td>65.630524</td>
+<td>66.077736</td>
+<td>8948800</td>
+<td>0.69</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2014-05-12 00:00:00-04:00</td>
+<td>66.324029</td>
+<td>66.336990</td>
+<td>65.805516</td>
+<td>66.259216</td>
+<td>8830500</td>
+<td>0.00</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+<p>You can find the full implementation of our data at <a href="./lstm_data.py">lstm_data.py</a> under the function <code>prepare_data()</code>.</p>
+</section>
+<section id="our-approach" class="level2">
+<h2 class="anchored" data-anchor-id="our-approach">Our Approach</h2>
+<section id="features-of-our-data-target-variable" class="level3">
+<h3 class="anchored" data-anchor-id="features-of-our-data-target-variable">Features of Our Data &amp; Target Variable</h3>
+<p>We used <code>SMA_20</code>, <code>SMA_50</code>, <code>Std_Dev</code>, <code>Z_Score</code>, <code>RSI</code>, <code>Close</code>, <code>TTM_P/E</code> as predictors for our models.</p>
+<p>The <code>SMA_20</code> and <code>SMA_50</code> are the 20-day and 50-day simple moving averages of the stock price. This means that the average closing price of the stock over the last 20 and 50 days, respectively.</p>
+<p>The <code>Std_Dev</code> is the standard deviation of the stock price meaning how much the stock price deviates from the mean.</p>
+<p>The <code>Z_Score</code> is the z-score of the stock price meaning how many standard deviations the stock price is from the mean.</p>
+<p>The <code>RSI</code> is the relative strength index of the stock price meaning how strong the stock price is relative to its past performance. It is calculated by taking the average of the gains and losses over a certain period of time.</p>
+<p>The <code>Close</code> is the closing price of the stock per day.</p>
+<p>The <code>TTM_P/E</code> is the trailing twelve months price-to-earnings ratio of the stock.</p>
+<p>We used the next day’s <code>Close</code> price as the target variable for our model.</p>
+</section>
+<section id="data-manipulation" class="level3">
+<h3 class="anchored" data-anchor-id="data-manipulation">Data Manipulation</h3>
+<p>We collected 10 years of data from May 7th, 2014 to May 7th, 2024 and used a train-test split of 90-10 in order to train our model on the first 9 years worth of the data and test it on the remaining 1 year’s worth of data. We used a standard scaler for scaling our data in order to ensure that the data was normalized. We fit the scaler on the training data and then applied it to the test data to avoid any information leaking. We then combined the training data for each stock into one dataset. We used the closing price of the stock as the target variable for our model.</p>
+<p>Here’s what our data looks like after creating our features and scaling the data:</p>
+<div id="cell-5" class="cell" data-execution_count="64">
+<div class="cell-output cell-output-stdout">
+<pre><code>The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload</code></pre>
+</div>
+</div>
+<div id="cell-6" class="cell" data-execution_count="72">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>tickers <span class="op">=</span> [<span class="st">'XOM'</span>, <span class="st">'CVX'</span>, <span class="st">'COP'</span>, <span class="st">'EPD'</span>, <span class="st">'EOG'</span>, <span class="st">'DUK'</span>, <span class="st">'MPC'</span>, <span class="st">'SLB'</span>, <span class="st">'PSX'</span>, <span class="st">'OXY'</span>]</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> <span class="st">'2014-05-06'</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>end <span class="op">=</span> <span class="st">'2024-05-07'</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># preps data, see lstm_data.py, prints size of each ticker's dataset</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>X_train, y_train, X_test, y_test, X_scalers, y_scalers, batch_size <span class="op">=</span> prepare_data(tickers, start_date<span class="op">=</span>start, end_date<span class="op">=</span>end, test_size<span class="op">=</span><span class="fl">0.1</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>X_train</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)
+(2041, 18)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="72">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Open</th>
+<th data-quarto-table-cell-role="th">High</th>
+<th data-quarto-table-cell-role="th">Low</th>
+<th data-quarto-table-cell-role="th">Close</th>
+<th data-quarto-table-cell-role="th">Volume</th>
+<th data-quarto-table-cell-role="th">Dividends</th>
+<th data-quarto-table-cell-role="th">Stock Splits</th>
+<th data-quarto-table-cell-role="th">SMA_10</th>
+<th data-quarto-table-cell-role="th">SMA_20</th>
+<th data-quarto-table-cell-role="th">SMA_50</th>
+<th data-quarto-table-cell-role="th">SMA_100</th>
+<th data-quarto-table-cell-role="th">SMA_250</th>
+<th data-quarto-table-cell-role="th">Std_Dev</th>
+<th data-quarto-table-cell-role="th">Z_Score</th>
+<th data-quarto-table-cell-role="th">RSI</th>
+<th data-quarto-table-cell-role="th">TTM_EPS</th>
+<th data-quarto-table-cell-role="th">TTM_P/E</th>
+<th data-quarto-table-cell-role="th">Returns</th>
+<th data-quarto-table-cell-role="th">Ticker</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2015-05-01</td>
+<td>-0.139877</td>
+<td>-0.131185</td>
+<td>-0.112171</td>
+<td>-0.102371</td>
+<td>-0.540891</td>
+<td>-0.127836</td>
+<td>0.00000</td>
+<td>-0.149377</td>
+<td>-0.173825</td>
+<td>-0.178037</td>
+<td>-0.063809</td>
+<td>0.319177</td>
+<td>-0.679901</td>
+<td>1.186546</td>
+<td>0.879810</td>
+<td>0.650885</td>
+<td>-0.095652</td>
+<td>0.893759</td>
+<td>XOM</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2015-05-04</td>
+<td>-0.080169</td>
+<td>-0.096257</td>
+<td>-0.064154</td>
+<td>-0.092513</td>
+<td>-0.732495</td>
+<td>-0.127836</td>
+<td>0.00000</td>
+<td>-0.142218</td>
+<td>-0.166130</td>
+<td>-0.178686</td>
+<td>-0.064625</td>
+<td>0.316818</td>
+<td>-0.653451</td>
+<td>1.177769</td>
+<td>0.973560</td>
+<td>0.650885</td>
+<td>-0.095424</td>
+<td>0.133748</td>
+<td>XOM</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2015-05-05</td>
+<td>-0.059251</td>
+<td>-0.088369</td>
+<td>-0.080672</td>
+<td>-0.111473</td>
+<td>-0.577151</td>
+<td>-0.127836</td>
+<td>0.00000</td>
+<td>-0.135595</td>
+<td>-0.160600</td>
+<td>-0.179007</td>
+<td>-0.065519</td>
+<td>0.314254</td>
+<td>-0.642313</td>
+<td>0.791839</td>
+<td>0.672019</td>
+<td>0.650885</td>
+<td>-0.095861</td>
+<td>-0.329225</td>
+<td>XOM</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2015-05-06</td>
+<td>-0.071421</td>
+<td>-0.093251</td>
+<td>-0.108714</td>
+<td>-0.127400</td>
+<td>-0.639387</td>
+<td>-0.127836</td>
+<td>0.00000</td>
+<td>-0.132800</td>
+<td>-0.152615</td>
+<td>-0.179992</td>
+<td>-0.065441</td>
+<td>0.311766</td>
+<td>-0.751693</td>
+<td>0.518627</td>
+<td>0.427504</td>
+<td>0.650885</td>
+<td>-0.096229</td>
+<td>-0.281992</td>
+<td>XOM</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2015-05-07</td>
+<td>-0.134173</td>
+<td>-0.163112</td>
+<td>-0.142135</td>
+<td>-0.149774</td>
+<td>-0.767664</td>
+<td>-0.127836</td>
+<td>0.00000</td>
+<td>-0.132571</td>
+<td>-0.146911</td>
+<td>-0.181595</td>
+<td>-0.065840</td>
+<td>0.309079</td>
+<td>-0.859104</td>
+<td>0.047923</td>
+<td>0.100192</td>
+<td>0.650885</td>
+<td>-0.096744</td>
+<td>-0.387753</td>
+<td>XOM</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2023-06-02</td>
+<td>0.610803</td>
+<td>0.625792</td>
+<td>0.636749</td>
+<td>0.650958</td>
+<td>0.109535</td>
+<td>-0.105084</td>
+<td>-0.02214</td>
+<td>0.607044</td>
+<td>0.598059</td>
+<td>0.727834</td>
+<td>0.786385</td>
+<td>0.982249</td>
+<td>-0.739053</td>
+<td>0.869582</td>
+<td>0.136220</td>
+<td>1.924677</td>
+<td>-0.222355</td>
+<td>0.810058</td>
+<td>OXY</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2023-06-05</td>
+<td>0.714326</td>
+<td>0.672373</td>
+<td>0.676732</td>
+<td>0.633996</td>
+<td>-0.312158</td>
+<td>-0.105084</td>
+<td>-0.02214</td>
+<td>0.608629</td>
+<td>0.594259</td>
+<td>0.728931</td>
+<td>0.783608</td>
+<td>0.979744</td>
+<td>-0.834725</td>
+<td>0.776482</td>
+<td>0.011823</td>
+<td>1.924677</td>
+<td>-0.222464</td>
+<td>-0.165726</td>
+<td>OXY</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2023-06-06</td>
+<td>0.590332</td>
+<td>0.602501</td>
+<td>0.623814</td>
+<td>0.636336</td>
+<td>-0.325573</td>
+<td>-0.105084</td>
+<td>-0.02214</td>
+<td>0.610977</td>
+<td>0.595673</td>
+<td>0.730434</td>
+<td>0.780891</td>
+<td>0.977007</td>
+<td>-0.819762</td>
+<td>0.773031</td>
+<td>0.029482</td>
+<td>1.924677</td>
+<td>-0.222449</td>
+<td>0.003637</td>
+<td>OXY</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2023-06-07</td>
+<td>0.652329</td>
+<td>0.667133</td>
+<td>0.694371</td>
+<td>0.671429</td>
+<td>-0.292849</td>
+<td>-0.105084</td>
+<td>-0.02214</td>
+<td>0.613090</td>
+<td>0.598854</td>
+<td>0.730900</td>
+<td>0.777538</td>
+<td>0.974819</td>
+<td>-0.772194</td>
+<td>1.238762</td>
+<td>0.294437</td>
+<td>1.924677</td>
+<td>-0.222223</td>
+<td>0.292064</td>
+<td>OXY</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2023-06-08</td>
+<td>0.669287</td>
+<td>0.645055</td>
+<td>0.635925</td>
+<td>0.662629</td>
+<td>-0.147267</td>
+<td>2.262466</td>
+<td>-0.02214</td>
+<td>0.616022</td>
+<td>0.607809</td>
+<td>0.728131</td>
+<td>0.774355</td>
+<td>0.973557</td>
+<td>-0.847555</td>
+<td>1.077118</td>
+<td>0.218085</td>
+<td>1.924677</td>
+<td>-0.222280</td>
+<td>-0.093700</td>
+<td>OXY</td>
+</tr>
+</tbody>
+</table>
+
+<p>20410 rows × 19 columns</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="models-we-employed" class="level3">
+<h3 class="anchored" data-anchor-id="models-we-employed">Models We Employed</h3>
+<p>Originally, we used rather simplistic models like logistic regression, Random Forest, and SVM in order to predict stock price movements. We utilized Recursive Feature Elimination (RFE) in order to determine the optimal features for prediction for each model. However, we found that these models were not able to predict stock price movements consistently with much accuracy. We then decided to use a Long Short-Term Memory (LSTM) model to predict stock price movements. <code>LSTM</code> models are a type of recurrent neural network (RNN) with the addition of “gates” notably the <code>input</code>, <code>forget</code> and <code>output</code> gates. These gates allow for the model to determine what information to retain or discard at each timestep, mitigating the vanishing descent issue found in traditional recurrent neural networks. The LSTM model accounts for the shortfalls of an RNN by capturing long-term dependencies in the data.</p>
+<p>The forget gate determines which information is either retained or discarded at each time step. It accepts the output from the previous time step <span class="math inline">\(h_{t-1}\)</span> and the input <span class="math inline">\(x_t\)</span> at the current time step. The forget gate is defined as:</p>
+<p><span class="math display">\[f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)\]</span></p>
+<p>The input gate determines which information is stored in the cell state. It avoids feeding the unimportant information into the current memory cell. It has three different components:</p>
+<ol type="1">
+<li>Getting the state of the cell that must be updated.</li>
+<li>Create a new cell state</li>
+<li>Update the cell state to the current cell state</li>
+</ol>
+<p>These are defined as:</p>
+<span class="math display">\[\begin{aligned}
+i_{t} &amp;= \sigma(W_{t} \cdot [h_{t-1}, x_{t}] + b_{i}) \\
+\widetilde{C}_{t} &amp;= \tanh(W_{c} \cdot [h_{t-1}, x_{t}] + b_{c}) \\
+C_{t} &amp;= f_{t} \ast C_{t-1} + i_{t} \ast \widetilde{C}_{t}
+\end{aligned}\]</span>
+<p>The output gate determines how much of the newly created cell state will be discarded and how much will be passed to the output. It is defined as:</p>
+<p><span class="math display">\[o_{t} = \sigma(W_{o} \cdot [h_{t-1}, x_{t}] + b_{o})\]</span></p>
+<p>This output information is firstly determined by a sigmoid layer, then the newly created cell state is processed by a tanh layer. The output is then multiplied by the sigmoid layer to determine the final output of the LSTM cell.</p>
+<p>Which is defined as:</p>
+<p><span class="math display">\[h_{t} = o_{t} \ast \tanh(C_{t})\]</span></p>
+<p>Taking this all into account, the LSTM model is able to retain information from previous time steps and use it to predict future stock price movements while disregarding irrelevant information.</p>
+<p>The implementation of our LSTM model can be found at: <a href="./lstm_model.py">lstm_model.py</a></p>
+</section>
+<section id="training-our-models" class="level3">
+<h3 class="anchored" data-anchor-id="training-our-models">Training Our Models</h3>
+<p>We first converted our wanted feature columns into a <code>torch</code> <code>Variable</code> to allow them to be differentiable. Then, we reshaped the data using <code>torch.reshape()</code> and <code>torch.utils.data.DataLoader</code> into <code>[batch_size, seq_len, input_size]</code>.</p>
+<div id="cell-8" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> [<span class="st">'SMA_20'</span>, <span class="st">'SMA_50'</span>, <span class="st">'Std_Dev'</span>, <span class="st">'Z_Score'</span>, <span class="st">'RSI'</span>, <span class="st">'Close'</span>, <span class="st">'TTM_P/E'</span>]</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>X_train_tensors <span class="op">=</span> Variable(torch.Tensor(np.array(X_train[features])))</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>y_train_tensors <span class="op">=</span> Variable(torch.Tensor(y_train.values))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>X_train_final <span class="op">=</span> torch.reshape(X_train_tensors, (X_train_tensors.shape[<span class="dv">0</span>], <span class="dv">1</span>, X_train_tensors.shape[<span class="dv">1</span>]))</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># split data by ticker</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>data_loader_train <span class="op">=</span> torch.utils.data.DataLoader(</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    torch.utils.data.TensorDataset(X_train_final, y_train_tensors),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    batch_size<span class="op">=</span>batch_size,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    shuffle<span class="op">=</span><span class="va">True</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="bu">next</span>(<span class="bu">iter</span>(data_loader_train))[<span class="dv">0</span>].shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<pre><code>torch.Size([2041, 1, 7])</code></pre>
+</div>
+</div>
+<p>We trained our model using our own personal devices. We used the <code>Adam</code> optimizer with a learning rate of 0.001. We trained the model for 1000 epochs for each stock in our dataset (10 total) and used the <code>torch.nn.MSELoss()</code> loss function to train the model.</p>
+<p>MSE is defined as:</p>
+<p><span class="math display">\[MSE = \frac{1}{n} \sum_{i=1}^{n} (\hat{y}_{i} - y_{i})^2\]</span></p>
+<p>Where <span class="math inline">\(y_{i}\)</span> is the true price and <span class="math inline">\(\hat{y}_{i}\)</span> is the predicted price.</p>
+<p>As mentioned previously our model was trained on 90% of the data and tested on the remaining 10%.</p>
+<p>If the model predicted the next days price to be positive, we would purchase the stock at the closing price and sell it at the closing price the next day. If the model predicted the next days price to be negative, we would short the stock at the closing price and buy it back at the closing price the next day. We would then calculate the profit or loss percent change for each stock and compare it to the last value benchmark.</p>
+<p>Below is our training code:</p>
+<div id="cell-11" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>num_epochs <span class="op">=</span> <span class="dv">1000</span> <span class="co"># 1000 epochs</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>learning_rate <span class="op">=</span> <span class="fl">0.001</span> <span class="co"># 0.001 lr</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>input_size <span class="op">=</span> X_train_final.shape[<span class="dv">2</span>] <span class="co"># number of features</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>hidden_size <span class="op">=</span> <span class="dv">32</span> <span class="co"># number of features in hidden state</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>num_layers <span class="op">=</span> <span class="dv">1</span> <span class="co"># number of stacked lstm layers</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>window <span class="op">=</span> <span class="dv">1</span> <span class="co"># number of windows, leave at 1, basically can ignore</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>num_classes <span class="op">=</span> <span class="dv">1</span> <span class="co"># number of output classes</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>lstm <span class="op">=</span> LSTMModel(num_classes, input_size, hidden_size, num_layers, seq_length<span class="op">=</span>window, batch_size<span class="op">=</span>batch_size) <span class="co">#our lstm class </span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>criterion <span class="op">=</span> torch.nn.MSELoss()    <span class="co"># mean-squared error for regression</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>optimizer <span class="op">=</span> torch.optim.Adam(lstm.parameters(), lr<span class="op">=</span>learning_rate) <span class="co"># ADAM optimizer</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># training loop</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(num_epochs):</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> i, data <span class="kw">in</span> <span class="bu">enumerate</span>(data_loader_train):</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>    X_, y_ <span class="op">=</span> data</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    outputs <span class="op">=</span> lstm.forward(X_) <span class="co">#forward pass</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>    optimizer.zero_grad() <span class="co">#calculate the gradient, manually setting to 0</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># obtain the loss function</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    loss <span class="op">=</span> criterion(outputs, y_.reshape(y_.size(<span class="dv">0</span>)<span class="op">*</span>y_.size(<span class="dv">1</span>), <span class="dv">1</span>))</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    loss.backward() <span class="co">#calculates the loss of the loss function</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    optimizer.step() <span class="co">#improve from loss, i.e backprop</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># if (i + 1) % 50 == 0:</span></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="co">#     print(f"Epoch {epoch}, batch {i:&gt;3}, loss on batch: {loss.item():.3f}")</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> epoch <span class="op">%</span> <span class="dv">100</span> <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Epoch: </span><span class="sc">%d</span><span class="st">, loss: </span><span class="sc">%1.5f</span><span class="st">"</span> <span class="op">%</span> (epoch, loss.item()))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch: 0, loss: 0.91365
+Epoch: 100, loss: 0.00494
+Epoch: 200, loss: 0.00502
+Epoch: 300, loss: 0.00508
+Epoch: 400, loss: 0.00451
+Epoch: 500, loss: 0.00478
+Epoch: 600, loss: 0.00479
+Epoch: 700, loss: 0.00491
+Epoch: 800, loss: 0.00514
+Epoch: 900, loss: 0.00504</code></pre>
+</div>
+</div>
+</section>
+<section id="model-evaluation" class="level3">
+<h3 class="anchored" data-anchor-id="model-evaluation">Model Evaluation</h3>
+<p>We evaluated our model by comparing the cumulative predicted stock price returns and accuracy to the actual cumulative stock price returns and accuracy and the cumulative last value benchmark returns and accuracy. The last value benchmark is defined as using the previous days value as the prediction for the current day. We would buy the stock at the current day’s close price and sell at the next day’s close price if the predicted returns were positive and do nothing if the predicted returns were negative. We followed the same principle in calculating actual cumulative stock returns and accuracy, and the cumulative last value benchmark returns and accuracy.</p>
+<p>We define accuracy for our purposes as percentage of times the model correctly predicts an upward or downward movement in the share price of a company.</p>
+<p>Consider a simple test case where the model predicts the stock price to go up and the stock price actually goes up. In this case, the model is correct. If the model predicts the stock price to go up and the stock price actually goes down, the model is incorrect. We calculate the accuracy of the model by dividing the number of correct predictions by the total number of predictions.</p>
+<p><strong>Accuracy per Stock</strong></p>
+<div id="cell-15" class="cell" data-execution_count="77">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10</span>):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    cum_strat_returns, cum_stock_returns, cum_lv_returns, accuracy, lv_accuracy, prediction_correl, lv_prediction_correl <span class="op">=</span> evaluate_lstm(lstm, X_test[i], y_test[i], X_scalers[i], y_scalers[i], features)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        cum_strat_returns_list <span class="op">=</span> np.array([cum_strat_returns])</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        cum_stock_returns_list <span class="op">=</span> np.array([cum_stock_returns])</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        cum_lv_returns_list <span class="op">=</span> np.array([cum_lv_returns])</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>        accuracy_list <span class="op">=</span> np.array([accuracy])</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>        lv_accuracy_list <span class="op">=</span> np.array([lv_accuracy])</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>        correl_list <span class="op">=</span> np.array([prediction_correl])</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>        lv_correl_list <span class="op">=</span> np.array([lv_prediction_correl])</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>        cum_strat_returns_list <span class="op">=</span> np.append(cum_strat_returns_list, np.array([cum_strat_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>        cum_stock_returns_list <span class="op">=</span> np.append(cum_stock_returns_list, np.array([cum_stock_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>        cum_lv_returns_list <span class="op">=</span> np.append(cum_lv_returns_list, np.array([cum_lv_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>        accuracy_list <span class="op">=</span> np.append(accuracy_list, np.array([accuracy]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        lv_accuracy_list <span class="op">=</span> np.append(lv_accuracy_list, np.array([lv_accuracy]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        correl_list <span class="op">=</span> np.append(correl_list, np.array([prediction_correl]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>        lv_correl_list <span class="op">=</span> np.append(lv_correl_list, np.array([lv_prediction_correl]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>XOM Accuracy: 0.5418502202643172, Correlation: 0.972313389714224, Last Value Accuracy: 0.5242290748898678, Last Value Correlation: 0.9780145037734742
+CVX Accuracy: 0.5154185022026432, Correlation: 0.9613024878319475, Last Value Accuracy: 0.5066079295154186, Last Value Correlation: 0.9635678490020599
+COP Accuracy: 0.5550660792951542, Correlation: 0.9689221084107935, Last Value Accuracy: 0.5418502202643172, Last Value Correlation: 0.9783667790929887
+EPD Accuracy: 0.5374449339207048, Correlation: 0.9860702298831613, Last Value Accuracy: 0.5506607929515418, Last Value Correlation: 0.9916250412456891
+EOG Accuracy: 0.5506607929515418, Correlation: 0.9686894982563453, Last Value Accuracy: 0.5462555066079295, Last Value Correlation: 0.9721381776147026
+DUK Accuracy: 0.4933920704845815, Correlation: 0.9693304786167968, Last Value Accuracy: 0.4889867841409692, Last Value Correlation: 0.9698313657418474
+MPC Accuracy: 0.5770925110132159, Correlation: 0.9716364908547462, Last Value Accuracy: 0.5550660792951542, Last Value Correlation: 0.9941712442141354
+SLB Accuracy: 0.4669603524229075, Correlation: 0.9745432552946375, Last Value Accuracy: 0.4669603524229075, Last Value Correlation: 0.9752418496648181
+PSX Accuracy: 0.6079295154185022, Correlation: 0.9801502512089683, Last Value Accuracy: 0.6123348017621145, Last Value Correlation: 0.995576915466044
+OXY Accuracy: 0.5110132158590308, Correlation: 0.9636470842152328, Last Value Accuracy: 0.5154185022026432, Last Value Correlation: 0.9638295520210561</code></pre>
+</div>
+</div>
+<p><strong>Average Accuracy</strong></p>
+<p>Below shows the overall accuracy, summed across our 10 stocks, vs the Last Value Benchmark.</p>
+<p>We find that the average accuracy of our model slightly outperforms the last value benchmark, but our correlation slighty underperforms the last value benchmark.</p>
+<div id="cell-17" class="cell" data-execution_count="80">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Avg Accuracy: </span><span class="sc">{</span>accuracy_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg Correlation: </span><span class="sc">{</span>correl_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg LV Accuracy: </span><span class="sc">{</span>lv_accuracy_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg LV Correlation: </span><span class="sc">{</span>lv_correl_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Avg Accuracy: 0.5356828193832598, Avg Correlation: 0.9716605274286853, Avg LV Accuracy: 0.5308370044052864, Avg LV Correlation: 0.9782363277836815</code></pre>
+</div>
+</div>
+<p><strong>Cumulative Returns</strong></p>
+<p>The code below shows the comparison between our strategy returns, the baseline stock returns, and the last value benchmark returns.</p>
+<p>We find that our strategy outperforms the baseline stock returns and the last value benchmark returns.</p>
+<div id="cell-fig-returns" class="cell" data-execution_count="54">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_strat_returns <span class="op">=</span> pd.DataFrame(cum_strat_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>] <span class="op">=</span> df_strat_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>df_strat_returns.index <span class="op">=</span> X_test[<span class="dv">0</span>].index</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>df_stock_returns <span class="op">=</span> pd.DataFrame(cum_stock_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>] <span class="op">=</span> df_stock_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>df_stock_returns.index <span class="op">=</span> X_test[<span class="dv">0</span>].index</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>df_lv_returns <span class="op">=</span> pd.DataFrame(cum_lv_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>df_lv_returns[<span class="st">'Cum_LV_Returns'</span>] <span class="op">=</span> df_lv_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>df_lv_returns.index <span class="op">=</span> X_test[<span class="dv">0</span>].index</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>total_strat_returns <span class="op">=</span> df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>total_stock_returns <span class="op">=</span> df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>total_lv_returns <span class="op">=</span> df_lv_returns[<span class="st">'Cum_LV_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Year Portfolio Returns: </span><span class="sc">{</span>total_strat_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Year Stock Returns: </span><span class="sc">{</span>total_stock_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Year LV Returns: </span><span class="sc">{</span>total_lv_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">5</span>))</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>plt.plot(df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>], label<span class="op">=</span><span class="st">'Strategy Returns'</span>)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>plt.plot(df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>], label<span class="op">=</span><span class="st">'Stock Returns'</span>)</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>plt.plot(df_lv_returns[<span class="st">'Cum_LV_Returns'</span>], label<span class="op">=</span><span class="st">'Last Value Benchmark'</span>)</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>plt.legend()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>1 Year Portfolio Returns: 1.2360575366734956
+1 Year Stock Returns: 1.2066049840833908
+1 Year LV Returns: 1.195690607517653</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-returns" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-returns-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="quant_research_files/figure-html/fig-returns-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-returns-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: A comparison of cumulative returns between our strategy returns, baseline stock returns, and the last value benchmark.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="live-mock-testing" class="level2">
+<h2 class="anchored" data-anchor-id="live-mock-testing">Live Mock Testing</h2>
+<p>For fun, we decided to do a live mock test for the past week (2024/05/07 - 2024/05/16) to see how are model does on current data. We followed the same procedures as above except we trained on 10 years of data prior to our test week.</p>
+<div id="cell-22" class="cell" data-execution_count="65">
+<div class="cell-output cell-output-stdout">
+<pre><code>(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)
+(2469, 15)</code></pre>
+</div>
+</div>
+<div id="cell-24" class="cell" data-execution_count="40">
+<div class="cell-output cell-output-stdout">
+<pre><code>Epoch: 0, loss: 0.89484
+Epoch: 100, loss: 0.00404
+Epoch: 200, loss: 0.00378
+Epoch: 300, loss: 0.00369
+Epoch: 400, loss: 0.00369
+Epoch: 500, loss: 0.00373
+Epoch: 600, loss: 0.00389
+Epoch: 700, loss: 0.00382
+Epoch: 800, loss: 0.00376
+Epoch: 900, loss: 0.00399</code></pre>
+</div>
+</div>
+<div id="cell-25" class="cell" data-execution_count="57">
+<div class="cell-output cell-output-display" data-execution_count="57">
+<pre><code>['lstm_live.joblib']</code></pre>
+</div>
+</div>
+<p>::: {#cell-26 .cell 0=‘e’ 1=‘c’ 2=‘h’ 3=‘o’ 4=‘:’ 5=‘f’ 6=‘a’ 7=‘l’ 8=‘s’ 9=‘e’ execution_count=67}</p>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>lstm_live <span class="op">=</span> load(<span class="st">'lstm_live.joblib'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>:::</p>
+<p>Here are the accuracies and correlations for each stock based on our strategy and last value:</p>
+<div id="cell-28" class="cell" data-execution_count="68">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">10</span>):</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    cum_strat_returns, cum_stock_returns, cum_lv_returns, accuracy, lv_accuracy, prediction_correl, lv_prediction_correl <span class="op">=</span> evaluate_lstm(lstm_live, X_test_list[i], y_test_list[i], X_scalers[i], y_scalers[i], features)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        cum_strat_returns_list <span class="op">=</span> np.array([cum_strat_returns])</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        cum_stock_returns_list <span class="op">=</span> np.array([cum_stock_returns])</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>        cum_lv_returns_list <span class="op">=</span> np.array([cum_lv_returns])</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        accuracy_list <span class="op">=</span> np.array([accuracy])</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>        lv_accuracy_list <span class="op">=</span> np.array([lv_accuracy])</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>        correl_list <span class="op">=</span> np.array([prediction_correl])</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>        cum_strat_returns_list <span class="op">=</span> np.append(cum_strat_returns_list, np.array([cum_strat_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>        cum_stock_returns_list <span class="op">=</span> np.append(cum_stock_returns_list, np.array([cum_stock_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>        cum_lv_returns_list <span class="op">=</span> np.append(cum_lv_returns_list, np.array([cum_lv_returns]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>        accuracy_list <span class="op">=</span> np.append(accuracy_list, np.array([accuracy]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>        lv_accuracy_list <span class="op">=</span> np.append(lv_accuracy_list, np.array([lv_accuracy]), axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>        correl_list <span class="op">=</span> np.append(correl_list, np.array([prediction_correl]), axis<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>XOM Accuracy: 0.5, Correlation: 0.45596059959860424, Last Value Accuracy: 0.3333333333333333, Last Value Correlation: 0.442960265038012
+CVX Accuracy: 0.6666666666666666, Correlation: 0.33422337988058554, Last Value Accuracy: 0.5, Last Value Correlation: 0.34341958688787927
+COP Accuracy: 0.6666666666666666, Correlation: 0.7971408777137727, Last Value Accuracy: 0.6666666666666666, Last Value Correlation: 0.7558464387577114
+EPD Accuracy: 0.3333333333333333, Correlation: 0.8684150010738954, Last Value Accuracy: 0.3333333333333333, Last Value Correlation: 0.8603779889931645
+EOG Accuracy: 0.3333333333333333, Correlation: 0.2363276728915621, Last Value Accuracy: 0.3333333333333333, Last Value Correlation: 0.25582456053077646
+DUK Accuracy: 0.3333333333333333, Correlation: -0.09651392314802673, Last Value Accuracy: 0.5, Last Value Correlation: -0.159262707461855
+MPC Accuracy: 0.6666666666666666, Correlation: 0.7663651315254851, Last Value Accuracy: 0.6666666666666666, Last Value Correlation: 0.7016596578784171
+SLB Accuracy: 0.5, Correlation: 0.42526094830678546, Last Value Accuracy: 0.5, Last Value Correlation: 0.44817487130500694
+PSX Accuracy: 0.6666666666666666, Correlation: 0.19340309591226992, Last Value Accuracy: 0.8333333333333334, Last Value Correlation: 0.27552121319099077
+OXY Accuracy: 0.3333333333333333, Correlation: 0.40172522417713447, Last Value Accuracy: 0.16666666666666666, Last Value Correlation: 0.4083298375864765</code></pre>
+</div>
+</div>
+<p>Here are the average accuracies and correlations:</p>
+<div id="cell-30" class="cell" data-execution_count="69">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Avg Accuracy: </span><span class="sc">{</span>accuracy_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg Correlation: </span><span class="sc">{</span>correl_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg LV Accuracy: </span><span class="sc">{</span>lv_accuracy_list<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">, Avg LV Correlation: </span><span class="sc">{</span>lv_prediction_correl<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Avg Accuracy: 0.4999999999999999, Avg Correlation: 0.43823080079320686, Avg LV Accuracy: 0.4833333333333333, Avg LV Correlation: 0.4083298375864765</code></pre>
+</div>
+</div>
+<p>Here are the returns for the strategy, stocks, and last value:</p>
+<div id="cell-fig-returns-live" class="cell" data-execution_count="70">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>df_strat_returns <span class="op">=</span> pd.DataFrame(cum_strat_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>] <span class="op">=</span> df_strat_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>df_strat_returns.index <span class="op">=</span> X_test_list[<span class="dv">0</span>].index</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>df_stock_returns <span class="op">=</span> pd.DataFrame(cum_stock_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>] <span class="op">=</span> df_stock_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>df_stock_returns.index <span class="op">=</span> X_test_list[<span class="dv">0</span>].index</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>df_lv_returns <span class="op">=</span> pd.DataFrame(cum_lv_returns_list.transpose(), columns<span class="op">=</span>tickers)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>df_lv_returns[<span class="st">'Cum_LV_Returns'</span>] <span class="op">=</span> df_lv_returns.mean(axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>df_lv_returns.index <span class="op">=</span> X_test_list[<span class="dv">0</span>].index</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>total_strat_returns <span class="op">=</span> df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>total_stock_returns <span class="op">=</span> df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>total_lv_returns <span class="op">=</span> df_lv_returns[<span class="st">'Cum_LV_Returns'</span>].iloc[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Week Portfolio Returns: </span><span class="sc">{</span>total_strat_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Week Stock Returns: </span><span class="sc">{</span>total_stock_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'1 Week LV Returns: </span><span class="sc">{</span>total_lv_returns<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">10</span>,<span class="dv">5</span>))</span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>plt.plot(df_strat_returns[<span class="st">'Cum_Strat_Returns'</span>], label<span class="op">=</span><span class="st">'Strategy Returns'</span>)</span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>plt.plot(df_stock_returns[<span class="st">'Cum_Stock_Returns'</span>], label<span class="op">=</span><span class="st">'Stock Returns'</span>)</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>plt.plot(df_lv_returns[<span class="st">'Cum_LV_Returns'</span>], label<span class="op">=</span><span class="st">'Last Value Benchmark'</span>)</span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>plt.legend()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>1 Week Portfolio Returns: 0.9981978730664818
+1 Week Stock Returns: 0.9968738574121445
+1 Week LV Returns: 0.9952073325941001</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-returns-live" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-returns-live-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="quant_research_files/figure-html/fig-returns-live-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-returns-live-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: A comparison of cumulative returns between our strategy returns, baseline stock returns, and the last value benchmark for 2024-05-07 to 2024-05-16.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="concluding-discussion" class="level2">
+<h2 class="anchored" data-anchor-id="concluding-discussion">Concluding Discussion</h2>
+<p>Our project was a success in the sense that we constructed a model that is profitable and more accurate than our benchmarks. Our original goal was to be better than “random chance” but this last value machine provides a more reasonable benchmark given that stocks tend to rise more than they fall over long time horizons (so simply saying “an accuracy above 0.5 is a success” is not reasonable). On our historical data test, we also achieved an average correlation coefficient of 0.9717 between our predicted prices and actual prices, which slightly lags the best results from <span class="citation" data-cites="bhandariLSTM2022">Bhandari et al. (<a href="#ref-bhandariLSTM2022" role="doc-biblioref">2022</a>)</span> and is below our last value benchmark at 0.9782. We didn’t take the same approach as we initially expected of using alternative data, instead using more conventional features, but the ultimate goal was accuracy and profitability, so we aren’t concerned by this change in methodology. We had substantially lower accuracy than <span class="citation" data-cites="gunduzEfficientPrediction2021">Gunduz (<a href="#ref-gunduzEfficientPrediction2021" role="doc-biblioref">2021</a>)</span> , who achieved accuracy of up to 0.675. There are many factors that could have contributed to this difference, including time frames (Gunduz used hourly data vs.&nbsp;our daily data), company geographies (Gunduz studied companies on the Borsa Istanbul), and number of features (Gunduz created a substantially greater number of features).</p>
+<p>There are a two main key assumptions worth noting. Our tests above make two simplifying assumptions about trading. First, we assume the entire portfolio enters every trade, which any reasonable asset manager would think is incredibly reckless and is a major risk management failure. Second, we assume we are able to buy and sell stocks exactly at their closing price on a given day. This isn’t as problematic an assumption as the first, but it’s still an assumption that may not reflect real-world circumstances, especially when trading small stocks with low trading volumes or, more generally, when trading with enough capital to influence stock prices.</p>
+<p>If we had more time, data, and computational resources, we would have explored creating and filtering a substantially greater number of features. We also would have liked to have worked with larger baskets of companies. We chose energy companies based on intuition that training a model on data from the same industry would result in better predictions.</p>
+</section>
+<section id="group-contributions-statement" class="level2">
+<h2 class="anchored" data-anchor-id="group-contributions-statement">Group Contributions Statement</h2>
+<p>Andre did research on RFE using logistic regression, random forest, and support vector machine before pivoting to an LSTM <a href="../../posts/final-project/axiao_research.html">axiao_research.ipynb</a>. He wrote the source code for the data preparation in <code>lstm_data.py</code>, the LSTM model in <code>lstm_model.py</code>, and the evaluation. He wrote the code for the plots for comparing cumulative returns and the code for calculating the accuracy of the strategy and the benchmarks.</p>
+<p>Donovan provided the initial research and the code for calculating the features <code>SMA_20</code>, <code>SMA_50</code>, <code>RSI</code>, <code>Z_Score</code>, and <code>Std_Dev</code>. He provided visualizations for the moving averages and performed inital tests using logistic regression in <a href="../../posts/final-project/dwood_test.html">dwood_test.ipynb</a>. He wrote the data section.</p>
+<p>James worked on an early analysis using Google Trends data in <a href="../../posts/final-project/prelim-analysis.html">prelim-analysis.ipynb</a>, which we pivoted away from after realizing the limited supply of daily data. He created the presentation and wrote the abstract, the introduction, the values, and the conclusion sections. He also wrote the code to calculate the correlation coefficients between predicted prices and actual prices.</p>
+</section>
+<section id="personal-reflection" class="level2">
+<h2 class="anchored" data-anchor-id="personal-reflection">Personal Reflection</h2>
+<p>While all three of us read up on relevant research and prior literature, I put together the introduction and so had to spend more time on this aspect of our project. I learned about the value of the prior literature–until I read the papers cited, we didn’t have any benchmark. We didn’t know what the best practices were to assess our work. Furthermore, we worked very effectively as a team. We didn’t meet frequently, but each time we met, we made substantial progress either in the project design, code, or writeup. I learned to get a bit better at getting up to speed on others’ code, trying to ask the right questions and spending the time myself with the program.</p>
+<p>I’m happy with what we’ve achieved in this project. I wanted a high-quality, easy-to-understand project that I can refer back to for future projects, and I think this is exactly that. The project is relatively simple in concept, even though the implementation wasn’t. I was originally interested in cleaning up messy data, but that ultimately wasn’t a problem because of the convenience of the Yahoo Finance API. I was also interested in rigorously testing our results. While we could have implemented more tests, I’m happy with what we have in terms of assessing our results across multiple dimensions (returns, accuracy, and correlation).</p>
+<p>A key takeaway for me is that constructing a model thoughtfully for real-world use is extremely difficult. We’re happy with our results, but our work isn’t reflective of what should actually be done in a portfolio. By averaging out our returns across 10 companies, we conceptually buy ourselves the ability to say we “only put 10% of the portfolio in each trade for each company,” but 10% is still a monster of an allocation. We also went into this project knowing it would be difficult to get great results, but we were still surprised by just how difficult it was to achieve similar results as the works cited.</p>
+<p>Working on this blog post was probably one of the most realistic projects I’ve done in a CS class. We spent a significant amount of time figuring out a direction for our project to take, how to best collaborate, and how to present our findings in an organized fashion. This was definitely a challenging project, and my main takeaway from it for my career is the learning and experience I got from collaborating with my group.</p>
+
+
+
+</section>
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-bhandariLSTM2022" class="csl-entry" role="listitem">
+Bhandari, Hum Nath, Nawa Raj Pokhrel, Ramchandra Rimal, Keshab R Dahal, and Rajendra K C Khatri. 2022. <span>“Predicting Stock Market Index Using LSTM.”</span> <em>Machine Learning with Applications</em> 9.
+</div>
+<div id="ref-gunduzEfficientPrediction2021" class="csl-entry" role="listitem">
+Gunduz, Hakan. 2021. <span>“An Efficient Stock Market Prediction Model Using Hybrid Feature Reduction Method Based on Variational Autoencoders and Recursive Feature Elimination.”</span> <em>Financial Innovation</em> 7.
+</div>
+<div id="ref-zhangPrediction2022" class="csl-entry" role="listitem">
+Zhang, Ruobing. 2022. <span>“LSTM-Based Stock Prediction Modeling and Analysis.”</span> <em>Proceedings of the 2022 7th International Conference on Financial Innovation and Economic Development (ICFIED 2022)</em>.
+</div>
+</div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

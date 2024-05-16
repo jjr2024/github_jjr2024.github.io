@@ -4,7 +4,6 @@ class LinearModel:
 
     def __init__(self):
         self.w = None
-        self.prev_w = None
 
     def score(self, X):
         """
@@ -103,7 +102,7 @@ class GradientDescentOptimizer:
     def __init__(self, model):
         self.model = model
 
-    def step(self, X, y, alpha, beta):
+    def step(self, X, y, lr, beta):
         """
         Complete one update of weights
 
@@ -116,7 +115,7 @@ class GradientDescentOptimizer:
             y, torch.Tensor: the target vector. y.size() == (n,),
             where n is the number of data points.
 
-            alpha, float: a hyperparameter that controls the learning rate,
+            lr, float: a hyperparameter that controls the learning rate,
             i.e., the size of change each iteration
 
             beta, float: a hyperparameter that controls the momentum rate.
@@ -132,19 +131,53 @@ class GradientDescentOptimizer:
         #If there is no previous weight, we exclude the previous weight from the equation
         #We apply the equation from the instructions here, which incorporates momentum
         if self.model.prev_w != None: 
-            new_w = self.model.w - alpha * grad + beta * (self.model.w - self.model.prev_w)
+            new_w = self.model.w - lr * grad + beta * (self.model.w - self.model.prev_w)
         else:
-            new_w = self.model.w - alpha * grad + beta * (self.model.w)
+            new_w = self.model.w - lr * grad + beta * (self.model.w)
         self.model.prev_w = self.model.w
         self.model.w = new_w
+    
+class KernelLogisticRegression:
+    def __init__(self, kernel, lam = 0.1, gamma = 0.1):
+        self.w = None
+        self.Xt = None
+        self.kernel = kernel
+        self.lam = lam
+        self.gamma = gamma
 
-class KernelLogisticRegression(LinearModel):
-    def __init__(self):
-        super().__init__()
+    def score(self, X):
+        """
+        Compute the scores for each data point in the feature matrix X. 
+        The formula for the ith entry of s is s[i] = <self.w, x[i]>. 
+
+        If self.w currently has value None, then it is necessary to first initialize self.w to a random value. 
+
+        ARGUMENTS: 
+            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s.
+
+            Xt, torch.Tensor: the training data. Xt.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s. 
+            
+            k, function from X -> float: a positive-definite kernel
+
+        RETURNS: 
+            s torch.Tensor: vector of scores. s.size() = (n,)
+        """
+        if self.w is None: 
+            self.w = torch.rand((X.size()[0]))
+        transpose_k = torch.t(self.kernel(X,self.Xt,self.gamma))
+        #print("tranpose k shape: " + str(self.kernel(X,self.Xt,self.gamma).size()))
+        #print("weights shape: " + str(self.w.size()))
+        return transpose_k @ self.w #outputs n x 1 tensor as intended
         
     def loss(self, X, y):
         """
-        Compute the empirical risk L(w) 
+        Compute the empirical risk L(w)
 
         ARGUMENTS: 
             X, torch.Tensor: the feature matrix. X.size() == (n, p), 
@@ -160,11 +193,11 @@ class KernelLogisticRegression(LinearModel):
         """
         #Calculate scores and apply sigmoid function to get predictions
         #Score calculation is where weights matter since score is just X @ w
-        sigmoid_score = torch.sigmoid(self.score(X))
-        #Calculate loss by effectively taking an average
-        return torch.sum(-y*torch.log(sigmoid_score) - (1-y)*torch.log(1 - sigmoid_score)) / X.size()[0]
-        #Need to add a term inside the sum of lambda||a||_1
         
+        sigmoid_score = torch.sigmoid(self.score(X))
+        l1_norm = torch.sum(torch.abs(self.w))
+        #Calculate loss by effectively taking an average
+        return -(torch.sum(y*torch.log(sigmoid_score) + (1-y)*torch.log(1 - sigmoid_score)) / X.size()[0]) + (self.lam*l1_norm)
     
     def grad(self, X, y):
         """
@@ -183,7 +216,6 @@ class KernelLogisticRegression(LinearModel):
             del-L(w), torch.Tensor: gradient of empirical risk. del-L(w).size() = (p,),
             where p is the number of features
         """
-
         sigmoid_score = torch.sigmoid(self.score(X))
         sigmoid_y = (sigmoid_score - y)
 
@@ -191,4 +223,41 @@ class KernelLogisticRegression(LinearModel):
         #sigmoid_y_i and x_i. We sum up those products across the 0th dimension, i.e., at the
         #observation level. Then we divide that sum by the number of observations, getting us
         #what is effectively an average across all observations
-        return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0)
+        return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0) + self.lam
+    
+    def step(self, X, y, lr):
+        """
+        Complete one update of weights
+
+        ARGUMENTS: 
+            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s.
+
+            y, torch.Tensor: the target vector. y.size() == (n,),
+            where n is the number of data points.
+
+            lr, float: a hyperparameter that controls the learning rate,
+            i.e., the size of change each iteration
+
+            beta, float: a hyperparameter that controls the momentum rate.
+            This allows the program to build up velocity in terms of change,
+            potentially allowing faster convergence
+
+        RETURNS: 
+            None. Method updates weights but returns nothing
+        """
+        grad = self.grad(X, y)
+        self.w = self.w - lr * grad
+    
+    def fit(self, X, y, m_epochs = 1000, lr = 0.1):
+        #Save training data
+        self.Xt = X
+        loss_vec = []
+
+        for _ in range(m_epochs):
+            loss = self.loss(X, y) 
+            loss_vec.append(loss)
+            self.step(X, y, lr)
+        return loss_vec

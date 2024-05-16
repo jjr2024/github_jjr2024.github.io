@@ -2,8 +2,13 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/final-project/axiao_research.html",
+      "/posts/final-project/dwood_test.html",
+      "/posts/final-project/prelim-analysis.html",
       "/posts/newton-method/newton-method.html",
       "/posts/logistic-regression/logistic-regression.html",
+      "/posts/kernel-machines/kernel-machines.html",
+      "/posts/final-project/quant_research.html",
       "/posts/perceptron-algo/perceptron-algo.html",
       "/posts/decision-making/DecisionMaking.html",
       "/posts/classifying-penguins/ClassifyingPenguins.html",
