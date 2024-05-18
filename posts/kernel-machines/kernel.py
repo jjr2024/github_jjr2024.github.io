@@ -1,156 +1,21 @@
 import torch
-
-class LinearModel:
-
-    def __init__(self):
-        self.w = None
-
-    def score(self, X):
-        """
-        Compute the scores for each data point in the feature matrix X. 
-        The formula for the ith entry of s is s[i] = <self.w, x[i]>. 
-
-        If self.w currently has value None, then it is necessary to first initialize self.w to a random value. 
-
-        ARGUMENTS: 
-            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s. 
-
-        RETURNS: 
-            s torch.Tensor: vector of scores. s.size() = (n,)
-        """
-        if self.w is None: 
-            self.w = torch.rand((X.size()[1]))
-        return X @ self.w
-    
-    def predict(self, X):
-        """
-        Compute the predictions for each data point in the feature matrix X. The prediction for the ith data point is either 0 or 1. 
-
-        ARGUMENTS: 
-            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s. 
-
-        RETURNS: 
-            y_hat, torch.Tensor: vector predictions in {0.0, 1.0}. y_hat.size() = (n,)
-        """
-        #Find the score
-        scores = self.score(X)
-        #Use threshold to set 0 or 1 for each vector
-        #Return the prediction vectors
-        #Applying arbitrary threshold 0.5
-        return torch.where(scores > 0.5, 1.0, 0.0)
-
-class LogisticRegression(LinearModel):
-    def __init__(self):
-        super().__init__()
-        
-    def loss(self, X, y):
-        """
-        Compute the empirical risk L(w) 
-
-        ARGUMENTS: 
-            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s.
-
-            y, torch.Tensor: the target vector. y.size() == (n,),
-            where n is the number of data points.
-
-        RETURNS: 
-            L(w), float: the empirical risk given current set of weights w
-        """
-        #Calculate scores and apply sigmoid function to get predictions
-        #Score calculation is where weights matter since score is just X @ w
-        sigmoid_score = torch.sigmoid(self.score(X))
-        #Calculate loss by effectively taking an average
-        return torch.sum(-y*torch.log(sigmoid_score) - (1-y)*torch.log(1 - sigmoid_score)) / X.size()[0]
-    
-    def grad(self, X, y):
-        """
-        Compute the gradient of the empirical risk del-L(w) 
-
-        ARGUMENTS: 
-            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s.
-
-            y, torch.Tensor: the target vector. y.size() == (n,),
-            where n is the number of data points.
-
-        RETURNS: 
-            del-L(w), torch.Tensor: gradient of empirical risk. del-L(w).size() = (p,),
-            where p is the number of features
-        """
-
-        sigmoid_score = torch.sigmoid(self.score(X))
-        sigmoid_y = (sigmoid_score - y)
-
-        #We turn our sigmoid_y from a (n,) tensor to a (n,1) tensor. Then we multiply each
-        #sigmoid_y_i and x_i. We sum up those products across the 0th dimension, i.e., at the
-        #observation level. Then we divide that sum by the number of observations, getting us
-        #what is effectively an average across all observations
-        return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0)
-    
-class GradientDescentOptimizer:
-    def __init__(self, model):
-        self.model = model
-
-    def step(self, X, y, lr, beta):
-        """
-        Complete one update of weights
-
-        ARGUMENTS: 
-            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s.
-
-            y, torch.Tensor: the target vector. y.size() == (n,),
-            where n is the number of data points.
-
-            lr, float: a hyperparameter that controls the learning rate,
-            i.e., the size of change each iteration
-
-            beta, float: a hyperparameter that controls the momentum rate.
-            This allows the program to build up velocity in terms of change,
-            potentially allowing faster convergence
-
-        RETURNS: 
-            None. Method updates weights but returns nothing
-        """
-        
-        grad = self.model.grad(X,y)
-
-        #If there is no previous weight, we exclude the previous weight from the equation
-        #We apply the equation from the instructions here, which incorporates momentum
-        if self.model.prev_w != None: 
-            new_w = self.model.w - lr * grad + beta * (self.model.w - self.model.prev_w)
-        else:
-            new_w = self.model.w - lr * grad + beta * (self.model.w)
-        self.model.prev_w = self.model.w
-        self.model.w = new_w
-    
+   
 class KernelLogisticRegression:
     def __init__(self, kernel, lam = 0.1, gamma = 0.1):
-        self.w = None
-        self.Xt = None
+        self.a = None #our weights
+        self.Xt = None #saves our training data
+        self.transpose_k = None #stores the tranpose of k to avoid recalculations
+        self.lossvec = None #keeps track of our losses
         self.kernel = kernel
         self.lam = lam
         self.gamma = gamma
 
-    def score(self, X):
+    def score(self, X, recompute_kernel = False):
         """
         Compute the scores for each data point in the feature matrix X. 
-        The formula for the ith entry of s is s[i] = <self.w, x[i]>. 
+        The formula for the ith entry of s is s[i] = <self.a, x[i]>. 
 
-        If self.w currently has value None, then it is necessary to first initialize self.w to a random value. 
+        If self.a currently has value None, then it is necessary to first initialize self.a to a random value. 
 
         ARGUMENTS: 
             X, torch.Tensor: the feature matrix. X.size() == (n, p), 
@@ -158,22 +23,18 @@ class KernelLogisticRegression:
             number of features. This implementation always assumes 
             that the final column of X is a constant column of 1s.
 
-            Xt, torch.Tensor: the training data. Xt.size() == (n, p), 
-            where n is the number of data points and p is the 
-            number of features. This implementation always assumes 
-            that the final column of X is a constant column of 1s. 
-            
-            k, function from X -> float: a positive-definite kernel
+            recompute_kernel, boolean: determines whether or not we should recompute k
 
         RETURNS: 
-            s torch.Tensor: vector of scores. s.size() = (n,)
+            s torch.Tensor: vector of scores. s.size() = (n,p)
         """
-        if self.w is None: 
-            self.w = torch.rand((X.size()[0]))
-        transpose_k = torch.t(self.kernel(X,self.Xt,self.gamma))
-        #print("tranpose k shape: " + str(self.kernel(X,self.Xt,self.gamma).size()))
-        #print("weights shape: " + str(self.w.size()))
-        return transpose_k @ self.w #outputs n x 1 tensor as intended
+        if self.a is None: 
+            self.a = torch.rand((X.size()[0])) / 10
+        
+        if recompute_kernel == True:
+            self.transpose_k = torch.t(self.kernel(X,self.Xt,self.gamma))
+        
+        return self.a @ self.transpose_k  #outputs n x p tensor
         
     def loss(self, X, y):
         """
@@ -193,11 +54,10 @@ class KernelLogisticRegression:
         """
         #Calculate scores and apply sigmoid function to get predictions
         #Score calculation is where weights matter since score is just X @ w
-        
         sigmoid_score = torch.sigmoid(self.score(X))
-        l1_norm = torch.sum(torch.abs(self.w))
-        #Calculate loss by effectively taking an average
-        return -(torch.sum(y*torch.log(sigmoid_score) + (1-y)*torch.log(1 - sigmoid_score)) / X.size()[0]) + (self.lam*l1_norm)
+        l1_norm = torch.sum(torch.abs(self.a))
+
+        return -(torch.mean(y*torch.log(sigmoid_score) + (1-y)*torch.log(1 - sigmoid_score))) + (self.lam*l1_norm)
     
     def grad(self, X, y):
         """
@@ -219,11 +79,9 @@ class KernelLogisticRegression:
         sigmoid_score = torch.sigmoid(self.score(X))
         sigmoid_y = (sigmoid_score - y)
 
-        #We turn our sigmoid_y from a (n,) tensor to a (n,1) tensor. Then we multiply each
-        #sigmoid_y_i and x_i. We sum up those products across the 0th dimension, i.e., at the
-        #observation level. Then we divide that sum by the number of observations, getting us
-        #what is effectively an average across all observations
-        return (sigmoid_y[:, None] * X).sum(dim=0) / X.size(0) + self.lam
+        grad = (self.transpose_k @ sigmoid_y) / X.size(0)
+        grad += self.lam * torch.sign(self.a)  # Gradient of L1 regularization
+        return grad
     
     def step(self, X, y, lr):
         """
@@ -241,23 +99,43 @@ class KernelLogisticRegression:
             lr, float: a hyperparameter that controls the learning rate,
             i.e., the size of change each iteration
 
-            beta, float: a hyperparameter that controls the momentum rate.
-            This allows the program to build up velocity in terms of change,
-            potentially allowing faster convergence
-
         RETURNS: 
             None. Method updates weights but returns nothing
         """
         grad = self.grad(X, y)
-        self.w = self.w - lr * grad
+        self.a = self.a - (lr * grad)
     
-    def fit(self, X, y, m_epochs = 1000, lr = 0.1):
+    def fit(self, X, y, m_epochs = 1000, lr = 0.001):
+        """
+        Fits our model to input training data
+
+        ARGUMENTS: 
+            X, torch.Tensor: the feature matrix. X.size() == (n, p), 
+            where n is the number of data points and p is the 
+            number of features. This implementation always assumes 
+            that the final column of X is a constant column of 1s.
+
+            y, torch.Tensor: the target vector. y.size() == (n,),
+            where n is the number of data points.
+
+            m_epochs, integer: the number of iterations, i.e., the
+            overall number of times we call step()
+
+            lr, float: a hyperparameter that controls the learning rate,
+            i.e., the size of change each iteration
+
+        RETURNS: 
+            None. Method updates weights and adds to the loss vector but returns nothing
+        """
         #Save training data
         self.Xt = X
         loss_vec = []
+
+        #Calculate the tranpose of k here to avoid doing the calculation more than once
+        self.transpose_k = torch.t(self.kernel(X,self.Xt,self.gamma))
 
         for _ in range(m_epochs):
             loss = self.loss(X, y) 
             loss_vec.append(loss)
             self.step(X, y, lr)
-        return loss_vec
+        self.lossvec = loss_vec
